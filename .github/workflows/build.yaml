@@ -1,0 +1,58 @@
+name: Build
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "*"
+  workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: true
+      QLTY_COVERAGE_TOKEN:
+        required: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: curl -sSL https://install.python-poetry.org | python3 -
+      - run: poetry --version
+      - run: export PATH="/root/.local/bin:$PATH"
+      - run: poetry install
+      - run: poetry run flake8
+      - run: poetry build
+      - run: |
+          poetry run pytest --capture=sys \
+            --junit-xml=coverage/test-results.xml \
+            --cov=kafka-collector \
+            --cov-report term-missing  \
+            --cov-report xml:coverage/coverage.xml \
+            --cov-report html:coverage/coverage.html \
+            --cov-report lcov:coverage/coverage.info
+      - uses: actions/upload-artifact@v5
+        with:
+          name: dist-${{ matrix.python-version }}
+          path: ./dist/
+      - uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: ./coverage/
+  sonarcloud:
+    needs: build
+    uses: ./.github/workflows/quality-sonarcloud.yml
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  qltysh:
+    needs: build
+    uses: ./.github/workflows/quality-qltysh.yml
+    secrets:
+      QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}

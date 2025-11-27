@@ -1,0 +1,26 @@
+name: SonarCloud.io
+
+on:
+  workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: true
+
+jobs:
+  SonarCloud:
+    name: SonarCloud.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v6
+        with:
+          name: coverage-report-3.13
+          path: ./coverage/
+      - run: ls -R
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+

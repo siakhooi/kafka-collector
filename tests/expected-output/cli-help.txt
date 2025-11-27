@@ -1,0 +1,7 @@
+usage: kafka-collector [-h] [-v]
+
+collect kafka messages from multiple topics
+
+options:
+  -h, --help     show this help message and exit
+  -v, --version  show program's version number and exit

@@ -1,0 +1,2 @@
+usage: kafka-collector [-h] [-v]
+kafka-collector: error: unrecognized arguments: -p

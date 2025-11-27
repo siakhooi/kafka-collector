@@ -1,0 +1,28 @@
+name: Deploy Pypi
+
+on:
+  workflow_call:
+    secrets:
+      PYPI_TOKEN:
+        required: true
+
+jobs:
+  deploy_pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist-3.13
+          path: ./dist/
+      - run: ls -lr
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.13
+      - run: curl -sSL https://install.python-poetry.org | python3 -
+      - run: poetry --version
+      - run: export PATH="/root/.local/bin:$PATH"
+      - run: |
+          export PATH="/root/.local/bin:$PATH"
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          poetry publish
