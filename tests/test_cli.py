@@ -12,7 +12,7 @@ def test_run_help(monkeypatch, capsys, option_help):
 
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run()
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 0
 
     with open("tests/expected-output/cli-help.txt", "r") as f:
@@ -31,7 +31,7 @@ def test_run_show_version(monkeypatch, capsys, option_version):
 
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run()
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 0
 
     with open("tests/expected-output/cli-version.txt", "r") as f:
@@ -50,7 +50,7 @@ def test_run_wrong_options(monkeypatch, capsys, options):
 
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run()
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 2
 
     captured = capsys.readouterr()
