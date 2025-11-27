@@ -33,7 +33,7 @@ jobs:
       - run: |
           poetry run pytest --capture=sys \
             --junit-xml=coverage/test-results.xml \
-            --cov=kafka-collector \
+            --cov=kafka_collector \
             --cov-report term-missing  \
             --cov-report xml:coverage/coverage.xml \
             --cov-report html:coverage/coverage.html \
