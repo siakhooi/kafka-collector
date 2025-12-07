@@ -8,3 +8,4 @@ GIT_MESSAGE="$RELEASE_TITLE"
 
 set -x
 git commit -m "$GIT_MESSAGE"
+git push
