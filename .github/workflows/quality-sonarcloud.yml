@@ -11,16 +11,18 @@ jobs:
     name: SonarCloud.io
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v6
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: coverage-report-3.14
           path: ./coverage/
+
       - run: ls -R
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+
+      - uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

@@ -20,10 +20,12 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ matrix.python-version }}
+
       - run: curl -sSL https://install.python-poetry.org | python3 -
       - run: poetry --version
       - run: export PATH="/root/.local/bin:$PATH"
@@ -38,14 +40,16 @@ jobs:
             --cov-report xml:coverage/coverage.xml \
             --cov-report html:coverage/coverage.html \
             --cov-report lcov:coverage/coverage.info
-      - uses: actions/upload-artifact@v5
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
         with:
           name: dist-${{ matrix.python-version }}
           path: ./dist/
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
         with:
           name: coverage-report-${{ matrix.python-version }}
           path: ./coverage/
+
   sonarcloud:
     needs: build
     uses: ./.github/workflows/quality-sonarcloud.yml
