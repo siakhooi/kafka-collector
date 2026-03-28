@@ -29,10 +29,6 @@ all: clean set-version install flake8 build tox-run
 release:
 	scripts/release.sh
 
-commit:
-	scripts/git-commit.sh
-	git push
-
 fix-cert:
 	pip install pip-system-certs --trusted-host pypi.org --trusted-host files.pythonhosted.org
 fix-pyenv:
