@@ -24,7 +24,7 @@ test:
 	 --cov-report html:coverage/coverage.html \
 	 --cov-report lcov:coverage/coverage.info
 
-all: clean set-version install flake8 build test
+all: clean set-version install flake8 build tox-run
 
 release:
 	scripts/release.sh
@@ -35,3 +35,7 @@ commit:
 
 fix-cert:
 	pip install pip-system-certs --trusted-host pypi.org --trusted-host files.pythonhosted.org
+fix-pyenv:
+	 pyenv versions --bare > .python-version
+tox-run:
+	tox run

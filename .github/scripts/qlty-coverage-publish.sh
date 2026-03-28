@@ -5,4 +5,4 @@ curl https://qlty.sh | bash
 
 export PATH="$HOME/.qlty/bin:$PATH"
 
-qlty coverage publish coverage/coverage.info
+qlty coverage publish coverage/coverage-py314.info
