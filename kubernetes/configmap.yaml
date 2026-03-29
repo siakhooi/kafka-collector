@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-collector-config
+  labels:
+    app: kafka-collector
+data:
+  KAFKA_TOPICS: "topic1,topic2"
+  KAFKA_BOOTSTRAP_SERVER: "kafka:9092"
+  KAFKA_GROUP: "my-consumer-group"
+  COLLECTOR_MODE: "service"
+  COLLECTOR_SERVICE_PORT: "8080"
+  COLLECTOR_CAPTURE_DIR: "/data/captures"
