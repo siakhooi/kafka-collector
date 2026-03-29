@@ -36,14 +36,14 @@ def parse_args() -> Options:
     parser.add_argument(
         "-t",
         "--topics",
-        required=True,
+        default=None,
         help="comma separated list of kafka topics to be listened to",
     )
 
     parser.add_argument(
         "-b",
         "--bootstrap-server",
-        default="localhost:9092",
+        default=None,
         help="kafka bootstrap server (default: localhost:9092)",
     )
 
@@ -72,7 +72,7 @@ def parse_args() -> Options:
     parser.add_argument(
         "-m",
         "--mode",
-        default="cli",
+        default=None,
         choices=["cli", "service"],
         help="run mode: cli or service (default: cli)",
     )
@@ -87,20 +87,57 @@ def parse_args() -> Options:
 
     args = parser.parse_args()
 
-    topics = [t.strip() for t in args.topics.split(",") if t.strip()]
+    env_topics = os.environ.get("KAFKA_TOPICS")
+    env_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVER")
+    env_group = os.environ.get("KAFKA_GROUP")
+    env_capture_dir = os.environ.get("COLLECTOR_CAPTURE_DIR")
+    env_mode = os.environ.get("COLLECTOR_MODE")
+    env_port = os.environ.get("COLLECTOR_SERVICE_PORT")
+
+    topics_str = args.topics if args.topics is not None else env_topics
+    if not topics_str:
+        raise ArgumentValidationError(
+            "--topics or KAFKA_TOPICS must be provided"
+        )
+    topics = [t.strip() for t in topics_str.split(",") if t.strip()]
     if not topics:
         raise ArgumentValidationError(
             "--topics must contain at least one topic"
         )
 
-    bootstrap_server = args.bootstrap_server
-    group_id = args.group if args.group else str(uuid.uuid4())
-    mode = args.mode
+    bootstrap_server = (
+        args.bootstrap_server if args.bootstrap_server is not None
+        else (env_bootstrap if env_bootstrap else "localhost:9092")
+    )
+
+    group_id = (
+        args.group if args.group is not None
+        else (env_group if env_group else str(uuid.uuid4()))
+    )
+
+    mode_value = args.mode if args.mode is not None else env_mode
+    if mode_value is not None and mode_value not in ["cli", "service"]:
+        raise ArgumentValidationError(
+            f"Invalid mode '{mode_value}'. Must be 'cli' or 'service'"
+        )
+    mode = mode_value if mode_value else "cli"
 
     output_file = args.output if args.output is not None else "-"
-    capture_dir = args.capture_dir if args.capture_dir is not None \
-        else "/tmp/kafka-collector"
-    port = args.port if args.port is not None else 8080
+
+    capture_dir = (
+        args.capture_dir if args.capture_dir is not None
+        else (env_capture_dir if env_capture_dir else "/tmp/kafka-collector")
+    )
+
+    port_value = args.port
+    if port_value is None and env_port:
+        try:
+            port_value = int(env_port)
+        except ValueError:
+            raise ArgumentValidationError(
+                f"Invalid COLLECTOR_SERVICE_PORT '{env_port}'. Must be integer"
+            )
+    port = port_value if port_value is not None else 8080
 
     if mode == "service":
         if args.output is not None:

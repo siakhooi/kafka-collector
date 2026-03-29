@@ -1,4 +1,4 @@
-usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
+usage: kafka-collector [-h] [-v] [-t TOPICS] [-b BOOTSTRAP_SERVER] [-g GROUP]
                        [-o OUTPUT] [-c CAPTURE_DIR] [-m {cli,service}]
                        [-p PORT]
 

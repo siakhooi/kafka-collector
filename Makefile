@@ -30,6 +30,9 @@ run1-s:
 	poetry run kafka-collector -t topic1,topic2,topic3 -m service
 run1-sc:
 	poetry run kafka-collector -t topic1,topic2,topic3 -m service -c /tmp/kafka-collector1
+run1-es:
+	COLLECTOR_MODE=service KAFKA_TOPICS=topic1,topic2,topic3 poetry run kafka-collector
+
 curl-files:
 	curl localhost:8080/files |jq
 curl-reset:

@@ -24,6 +24,13 @@ options:
   -o, --output OUTPUT   output file path, use '-' for stdout (default: stdout)
 
 ```
+## Environment Variables
+- `KAFKA_TOPICS` - comma separated list of topics
+- `KAFKA_BOOTSTRAP_SERVER` - bootstrap server address
+- `KAFKA_GROUP` - consumer group id
+- `COLLECTOR_CAPTURE_DIR` - capture directory for service mode
+- `COLLECTOR_MODE` - run mode (cli or service)
+- `COLLECTOR_SERVICE_PORT` - service port (must be integer)
 
 
 ## Links
