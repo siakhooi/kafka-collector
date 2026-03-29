@@ -2,10 +2,11 @@ import os
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import IO, TypedDict
+from typing import TextIO, TypedDict
 
 from kafka_collector.exceptions import (
     CaptureNameNotFoundError,
+    DuplicateCaptureNameError,
     NoCompletedCapturesError,
 )
 
@@ -19,15 +20,22 @@ class CompletedCapture(TypedDict):
 class FileManager:
     def __init__(self, capture_dir: str):
         self.capture_dir = capture_dir
-        self.current_file: IO | None = None
+        self.current_file: TextIO | None = None
         self.current_filepath: str | None = None
         self.completed_files: list[CompletedCapture] = []
         self.lock = threading.Lock()
 
     def _generate_filepath(self) -> str:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
         filename = f"kafka-collector_{timestamp}.jsonl"
         return os.path.join(self.capture_dir, filename)
+
+    def _completed_entry(self, file_name: str, path: str) -> CompletedCapture:
+        return {
+            "name": file_name,
+            "path": path,
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+        }
 
     def _generate_short_id(self) -> str:
         return uuid.uuid4().hex[:8]
@@ -54,15 +62,15 @@ class FileManager:
             file_name = name if name else self._generate_short_id()
 
             if any(f["name"] == file_name for f in self.completed_files):
-                raise ValueError(f"name '{file_name}' already exists")
+                raise DuplicateCaptureNameError(
+                    f"name '{file_name}' already exists"
+                )
 
             if self.current_file and self.current_filepath:
                 self.current_file.close()
-                self.completed_files.append({
-                    "name": file_name,
-                    "path": self.current_filepath,
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
-                })
+                self.completed_files.append(
+                    self._completed_entry(file_name, self.current_filepath)
+                )
 
             return self._start_new_capture_unlocked()
 

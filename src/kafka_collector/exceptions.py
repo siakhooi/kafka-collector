@@ -8,3 +8,7 @@ class CaptureNameNotFoundError(Exception):
 
 class NoCompletedCapturesError(Exception):
     pass
+
+
+class DuplicateCaptureNameError(Exception):
+    pass

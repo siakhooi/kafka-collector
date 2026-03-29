@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify, send_file
 
 from kafka_collector.exceptions import (
     CaptureNameNotFoundError,
+    DuplicateCaptureNameError,
     NoCompletedCapturesError,
 )
 from kafka_collector.file_manager import FileManager
@@ -66,7 +67,7 @@ def create_app(file_manager: FileManager) -> Flask:
                 "status": "ok",
                 "new_file": new_filepath
             })
-        except ValueError as e:
+        except DuplicateCaptureNameError as e:
             return jsonify({"error": str(e)}), 400
 
     @app.route("/files", methods=["GET"])
