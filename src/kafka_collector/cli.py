@@ -1,6 +1,7 @@
 import json
 import sys
 import threading
+from contextlib import contextmanager
 
 from kafka import KafkaConsumer
 
@@ -43,23 +44,22 @@ def _create_consumer(options: Options) -> KafkaConsumer:
     return consumer
 
 
-def run_cli_mode(
-    consumer: KafkaConsumer,
-    output_file: str
-) -> None:
+@contextmanager
+def _open_output(output_file: str):
     if output_file == "-":
-        out = sys.stdout
-        should_close = False
+        yield sys.stdout
     else:
-        out = open(output_file, "a")
-        should_close = True
+        f = open(output_file, "a")
+        try:
+            yield f
+        finally:
+            f.close()
 
-    try:
+
+def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
+    with _open_output(output_file) as out:
         for message in consumer:
             print(json.dumps(_format_message(message)), file=out, flush=True)
-    finally:
-        if should_close:
-            out.close()
 
 
 def run_service_mode(
