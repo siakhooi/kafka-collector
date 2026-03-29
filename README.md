@@ -9,8 +9,9 @@ pip install kafka_collector
 ## Usage
 ```
 $ kafka-collector -h
-usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
-                       [-o OUTPUT]
+usage: kafka-collector [-h] [-v] [-t TOPICS] [-b BOOTSTRAP_SERVER] [-g GROUP]
+                       [-o OUTPUT] [-c CAPTURE_DIR] [-m {cli,service}]
+                       [-p PORT]
 
 collect kafka messages from multiple topics
 
@@ -22,6 +23,12 @@ options:
                         kafka bootstrap server (default: localhost:9092)
   -g, --group GROUP     consumer group id (default: random uuid)
   -o, --output OUTPUT   output file path, use '-' for stdout (default: stdout)
+  -c, --capture-dir CAPTURE_DIR
+                        capture directory for service mode (default:
+                        /tmp/kafka-collector)
+  -m, --mode {cli,service}
+                        run mode: cli or service (default: cli)
+  -p, --port PORT       service port for service mode (default: 8080)
 
 ```
 ## Environment Variables
@@ -32,6 +39,10 @@ options:
 - `COLLECTOR_MODE` - run mode (cli or service)
 - `COLLECTOR_SERVICE_PORT` - service port (must be integer)
 
+## Deployment Examples
+
+- [Docker Compose](docker-compose/) - Run with Docker Compose
+- [Kubernetes](kubernetes/) - Deploy to Kubernetes
 
 ## Links
 - https://pypi.org/project/kafka_collector/
