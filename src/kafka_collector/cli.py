@@ -48,7 +48,10 @@ def run() -> None:
 
     topics = [t.strip() for t in args.topics.split(",") if t.strip()]
     if not topics:
-        print("Error: --topics must contain at least one topic", file=sys.stderr)
+        print(
+            "Error: --topics must contain at least one topic",
+            file=sys.stderr
+        )
         sys.exit(1)
 
     bootstrap_server = args.bootstrap_server
@@ -68,7 +71,9 @@ def run() -> None:
                 "topic": message.topic,
                 "timestamp": message.timestamp,
                 "header": dict(message.headers) if message.headers else {},
-                "value": message.value.decode("utf-8") if message.value else None,
+                "value": (
+                    message.value.decode("utf-8") if message.value else None
+                ),
                 "key": message.key.decode("utf-8") if message.key else None,
             }
             print(json.dumps(output), flush=True)
