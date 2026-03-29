@@ -21,12 +21,16 @@ class FileManager:
     def _generate_short_id(self) -> str:
         return uuid.uuid4().hex[:8]
 
+    def _start_new_capture_unlocked(self) -> str:
+        # Caller must hold self.lock.
+        filepath = self._generate_filepath()
+        self.current_file = open(filepath, "a")
+        self.current_filepath = filepath
+        return filepath
+
     def open_new_file(self) -> str:
         with self.lock:
-            filepath = self._generate_filepath()
-            self.current_file = open(filepath, "a")
-            self.current_filepath = filepath
-            return filepath
+            return self._start_new_capture_unlocked()
 
     def write(self, data: str) -> None:
         with self.lock:
@@ -48,10 +52,7 @@ class FileManager:
                     "path": self.current_filepath
                 })
 
-            filepath = self._generate_filepath()
-            self.current_file = open(filepath, "a")
-            self.current_filepath = filepath
-            return filepath
+            return self._start_new_capture_unlocked()
 
     def get_files(self) -> List[Dict[str, str]]:
         with self.lock:
@@ -75,4 +76,5 @@ class FileManager:
         with self.lock:
             if self.current_file:
                 self.current_file.close()
-                self.current_file = None
+            self.current_file = None
+            self.current_filepath = None
