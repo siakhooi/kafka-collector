@@ -27,7 +27,7 @@ jobs:
           path: ./dist/
 
       - run: ls -l . ./dist/ ./docker
-      - run: cat release.env >> $GITHUB_ENV
+      - run: cat release.docker.env >> $GITHUB_ENV
 
       - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         if: ${{ inputs.push-images }}
