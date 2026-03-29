@@ -11,6 +11,9 @@ run-p:
 	poetry run kafka-collector -t xx -p
 run1:
 	poetry run kafka-collector -t topic1,topic2,topic3
+run1-o:
+	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl
+
 set-version:
 	scripts/set-version.sh
 build:

@@ -44,6 +44,13 @@ def run() -> None:
         help="consumer group id (default: random uuid)",
     )
 
+    parser.add_argument(
+        "-o",
+        "--output",
+        default="-",
+        help="output file path, use '-' for stdout (default: stdout)",
+    )
+
     args = parser.parse_args()
 
     topics = [t.strip() for t in args.topics.split(",") if t.strip()]
@@ -57,6 +64,8 @@ def run() -> None:
     bootstrap_server = args.bootstrap_server
     group_id = args.group if args.group else str(uuid.uuid4())
 
+    output_file = args.output
+
     try:
         consumer = KafkaConsumer(
             *topics,
@@ -69,17 +78,32 @@ def run() -> None:
         while not consumer.assignment():
             consumer.poll(timeout_ms=100)
 
-        for message in consumer:
-            output = {
-                "topic": message.topic,
-                "timestamp": message.timestamp,
-                "header": dict(message.headers) if message.headers else {},
-                "value": (
-                    message.value.decode("utf-8") if message.value else None
-                ),
-                "key": message.key.decode("utf-8") if message.key else None,
-            }
-            print(json.dumps(output), flush=True)
+        if output_file == "-":
+            out = sys.stdout
+            should_close = False
+        else:
+            out = open(output_file, "a")
+            should_close = True
+
+        try:
+            for message in consumer:
+                output = {
+                    "topic": message.topic,
+                    "timestamp": message.timestamp,
+                    "header": dict(message.headers) if message.headers else {},
+                    "value": (
+                        message.value.decode("utf-8")
+                        if message.value else None
+                    ),
+                    "key": (
+                        message.key.decode("utf-8")
+                        if message.key else None
+                    ),
+                }
+                print(json.dumps(output), file=out, flush=True)
+        finally:
+            if should_close:
+                out.close()
 
     except Exception as e:
         print_to_stderr_and_exit(e, 1)

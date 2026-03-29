@@ -1,4 +1,4 @@
-usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
+usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP] [-o OUTPUT]
 
 collect kafka messages from multiple topics
 
@@ -9,3 +9,4 @@ options:
   -b, --bootstrap-server BOOTSTRAP_SERVER
                         kafka bootstrap server (default: localhost:9092)
   -g, --group GROUP     consumer group id (default: random uuid)
+  -o, --output OUTPUT   output file path, use '-' for stdout (default: stdout)
