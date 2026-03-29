@@ -1,6 +1,6 @@
 [project]
 name = "kafka_collector"
-version = "0.0.1"
+version = "0.1.0"
 description = "collect kafka messages from multiple topics"
 authors = [
     {name = "Siak Hooi",email = "siakhooi@gmail.com"}
