@@ -12,16 +12,14 @@ _DOWNLOAD_TYPE_ERROR = (
 )
 
 
-def parse_name_args(raw_values: list[str]) -> tuple[str | None, str | None]:
-    """Validate ``name`` query values. Returns ``(error_message, name)``.
-    ``name`` is ``None`` when the parameter is absent; otherwise it is stripped
+def parse_name_value(value: str | None) -> tuple[str | None, str | None]:
+    """Validate a single ``name`` value. Returns ``(error_message, name)``.
+    ``name`` is ``None`` when the value is absent; otherwise it is stripped
     and validated. ``error_message`` is set when the client should receive 400.
     """
-    if len(raw_values) > 1:
-        return ("duplicate name parameter", None)
-    if not raw_values:
+    if value is None:
         return (None, None)
-    stripped = raw_values[0].strip()
+    stripped = value.strip()
     if not stripped:
         return ("name must not be empty", None)
     if len(stripped) > MAX_CAPTURE_NAME_LEN:
@@ -32,6 +30,18 @@ def parse_name_args(raw_values: list[str]) -> tuple[str | None, str | None]:
     if not _NAME_ALLOWED.fullmatch(stripped):
         return ("name contains invalid characters", None)
     return (None, stripped)
+
+
+def parse_name_args(raw_values: list[str]) -> tuple[str | None, str | None]:
+    """Validate ``name`` query values. Returns ``(error_message, name)``.
+    ``name`` is ``None`` when the parameter is absent; otherwise it is stripped
+    and validated. ``error_message`` is set when the client should receive 400.
+    """
+    if len(raw_values) > 1:
+        return ("duplicate name parameter", None)
+    if not raw_values:
+        return (None, None)
+    return parse_name_value(raw_values[0])
 
 
 def parse_type_args(raw_values: list[str]) -> tuple[str | None, str]:

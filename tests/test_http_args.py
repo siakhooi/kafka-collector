@@ -8,8 +8,46 @@ from kafka_collector.constants import (
 from kafka_collector.http_args import (
     MAX_CAPTURE_NAME_LEN,
     parse_name_args,
+    parse_name_value,
     parse_type_args,
 )
+
+
+def test_parse_name_value_none():
+    assert parse_name_value(None) == (None, None)
+
+
+def test_parse_name_value_valid():
+    assert parse_name_value("segment1") == (None, "segment1")
+
+
+def test_parse_name_value_strips():
+    assert parse_name_value("  x  ") == (None, "x")
+
+
+def test_parse_name_value_empty_string():
+    err, name = parse_name_value("")
+    assert err == "name must not be empty"
+    assert name is None
+
+
+def test_parse_name_value_whitespace_only():
+    err, name = parse_name_value("  \t  ")
+    assert err == "name must not be empty"
+    assert name is None
+
+
+def test_parse_name_value_too_long():
+    s = "a" * (MAX_CAPTURE_NAME_LEN + 1)
+    err, name = parse_name_value(s)
+    assert err == f"name exceeds maximum length ({MAX_CAPTURE_NAME_LEN})"
+    assert name is None
+
+
+def test_parse_name_value_invalid_characters():
+    err, name = parse_name_value("bad space")
+    assert err == "name contains invalid characters"
+    assert name is None
 
 
 def test_parse_name_args_absent():

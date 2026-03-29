@@ -38,7 +38,7 @@ curl-files:
 curl-reset:
 	curl -X POST localhost:8080/reset
 curl-reset-name:
-	curl -X POST localhost:8080/reset?name=abc
+	curl -X POST localhost:8080/reset -H "Content-Type: application/json" -d '{"name":"abc"}'
 curl-download:
 	curl localhost:8080/download
 curl-download-name:

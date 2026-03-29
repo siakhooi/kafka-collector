@@ -8,7 +8,11 @@ from kafka_collector.exceptions import (
     NoCompletedCapturesError,
 )
 from kafka_collector.file_manager import FileManager
-from kafka_collector.http_args import parse_name_args, parse_type_args
+from kafka_collector.http_args import (
+    parse_name_args,
+    parse_name_value,
+    parse_type_args,
+)
 from kafka_collector.service_helpers import (
     json_error,
     resolve_download_target,
@@ -25,7 +29,8 @@ def create_app(file_manager: FileManager) -> Flask:
 
     @app.route("/reset", methods=["POST"])
     def reset() -> ResponseReturnValue:
-        err, name = parse_name_args(request.args.getlist("name"))
+        body = request.get_json(silent=True) or {}
+        err, name = parse_name_value(body.get("name"))
         if err:
             return json_error(err, 400)
         try:
