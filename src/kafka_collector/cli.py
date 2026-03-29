@@ -66,6 +66,9 @@ def run() -> None:
             enable_auto_commit=True,
         )
 
+        while not consumer.assignment():
+            consumer.poll(timeout_ms=100)
+
         for message in consumer:
             output = {
                 "topic": message.topic,

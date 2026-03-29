@@ -1,0 +1,13 @@
+usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
+
+collect kafka messages from multiple topics
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -t TOPICS, --topics TOPICS
+                        comma separated list of kafka topics to be listened to
+  -b BOOTSTRAP_SERVER, --bootstrap-server BOOTSTRAP_SERVER
+                        kafka bootstrap server (default: localhost:9092)
+  -g GROUP, --group GROUP
+                        consumer group id (default: random uuid)
