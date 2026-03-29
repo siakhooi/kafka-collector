@@ -33,6 +33,51 @@ def _json_error(message: str, status: int) -> ResponseReturnValue:
     return jsonify(_error_payload(message)), status
 
 
+def _resolve_download_target(
+    file_manager: FileManager,
+    name: str | None,
+) -> tuple[str, str]:
+    if name is not None:
+        return name, file_manager.get_file_by_name(name)
+    return file_manager.get_last_completed_file()
+
+
+def _response_if_capture_missing(
+    filepath: str,
+) -> ResponseReturnValue | None:
+    if os.path.exists(filepath):
+        return None
+    logger.warning(
+        "Capture path recorded but file missing on disk: %s",
+        filepath,
+    )
+    return _json_error(API_ERROR_CAPTURE_FILE_MISSING, 404)
+
+
+def _send_capture_file(
+    filepath: str,
+    download_name: str,
+    file_type: str,
+) -> ResponseReturnValue:
+    if file_type == DOWNLOAD_KIND_ZIP:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.write(filepath, os.path.basename(filepath))
+        zip_buffer.seek(0)
+        return send_file(
+            zip_buffer,
+            mimetype=MIME_TYPE_ZIP,
+            as_attachment=True,
+            download_name=f"{download_name}.zip",
+        )
+    return send_file(
+        filepath,
+        mimetype=MIME_TYPE_JSONL,
+        as_attachment=True,
+        download_name=os.path.basename(filepath),
+    )
+
+
 def create_app(file_manager: FileManager) -> Flask:
     app = Flask(__name__)
 
@@ -65,40 +110,18 @@ def create_app(file_manager: FileManager) -> Flask:
             return _json_error(err_type, 400)
 
         try:
-            if name:
-                filepath = file_manager.get_file_by_name(name)
-                download_name = name
-            else:
-                download_name, filepath = \
-                    file_manager.get_last_completed_file()
-
-            if not os.path.exists(filepath):
-                logger.warning(
-                    "Capture path recorded but file missing on disk: %s",
-                    filepath,
-                )
-                return _json_error(API_ERROR_CAPTURE_FILE_MISSING, 404)
-
-            if file_type == DOWNLOAD_KIND_ZIP:
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(
-                    zip_buffer, "w", zipfile.ZIP_DEFLATED
-                ) as zf:
-                    zf.write(filepath, os.path.basename(filepath))
-                zip_buffer.seek(0)
-                return send_file(
-                    zip_buffer,
-                    mimetype=MIME_TYPE_ZIP,
-                    as_attachment=True,
-                    download_name=f"{download_name}.zip"
-                )
-            else:
-                return send_file(
-                    filepath,
-                    mimetype=MIME_TYPE_JSONL,
-                    as_attachment=True,
-                    download_name=os.path.basename(filepath)
-                )
+            download_name, filepath = _resolve_download_target(
+                file_manager,
+                name,
+            )
+            missing = _response_if_capture_missing(filepath)
+            if missing is not None:
+                return missing
+            return _send_capture_file(
+                filepath,
+                download_name,
+                file_type,
+            )
         except CaptureNameNotFoundError as e:
             return _json_error(str(e), 404)
         except NoCompletedCapturesError as e:
