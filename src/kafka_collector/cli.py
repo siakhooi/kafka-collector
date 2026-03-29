@@ -4,9 +4,9 @@ import threading
 
 from kafka import KafkaConsumer
 
-from kafka_collector.args import (
-    ArgumentValidationError, Mode, Options, parse_args
-)
+from kafka_collector.args import Options, parse_args
+from kafka_collector.constants import Mode
+from kafka_collector.exceptions import ArgumentValidationError
 from kafka_collector.service import FileManager, create_app
 
 

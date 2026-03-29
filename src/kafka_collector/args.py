@@ -2,10 +2,24 @@ import argparse
 import os
 import sys
 import uuid
-from dataclasses import dataclass
-from enum import Enum
+from dataclasses import dataclass, field
 from importlib.metadata import version
 from typing import List, Optional, TypeVar
+
+from kafka_collector.constants import (
+    DEFAULT_BOOTSTRAP_SERVER,
+    DEFAULT_CAPTURE_DIR,
+    DEFAULT_MODE,
+    DEFAULT_PORT,
+    ENV_BOOTSTRAP_SERVER,
+    ENV_CAPTURE_DIR,
+    ENV_GROUP,
+    ENV_MODE,
+    ENV_SERVICE_PORT,
+    ENV_TOPICS,
+    Mode,
+)
+from kafka_collector.exceptions import ArgumentValidationError
 
 T = TypeVar('T')
 
@@ -22,37 +36,15 @@ def _resolve_value(
     return default
 
 
-class Mode(Enum):
-    CLI = "cli"
-    SERVICE = "service"
-
-
-DEFAULT_BOOTSTRAP_SERVER = "localhost:9092"
-DEFAULT_CAPTURE_DIR = "/tmp/kafka-collector"
-DEFAULT_PORT = 8080
-DEFAULT_MODE = Mode.CLI
-
-ENV_TOPICS = "KAFKA_TOPICS"
-ENV_BOOTSTRAP_SERVER = "KAFKA_BOOTSTRAP_SERVER"
-ENV_GROUP = "KAFKA_GROUP"
-ENV_CAPTURE_DIR = "COLLECTOR_CAPTURE_DIR"
-ENV_MODE = "COLLECTOR_MODE"
-ENV_SERVICE_PORT = "COLLECTOR_SERVICE_PORT"
-
-
-class ArgumentValidationError(Exception):
-    pass
-
-
 @dataclass
 class Options:
-    topics: List[str]
-    bootstrap_server: str
-    group_id: str
-    output_file: str
-    capture_dir: str
-    mode: Mode
-    port: int
+    topics: List[str] = field(default_factory=list)
+    bootstrap_server: str = DEFAULT_BOOTSTRAP_SERVER
+    group_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    output_file: str = "-"
+    capture_dir: str = DEFAULT_CAPTURE_DIR
+    mode: Mode = DEFAULT_MODE
+    port: int = DEFAULT_PORT
 
 
 def _create_parser() -> argparse.ArgumentParser:
