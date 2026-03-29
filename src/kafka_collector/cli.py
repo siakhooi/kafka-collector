@@ -2,11 +2,13 @@ import json
 import sys
 import threading
 from contextlib import contextmanager
+from typing import Any, Generator, TextIO
 
 from kafka import KafkaConsumer
 
 from kafka_collector.args import Options, parse_args
 from kafka_collector.constants import (
+    FLASK_HOST,
     KAFKA_AUTO_OFFSET_RESET,
     KAFKA_ENABLE_AUTO_COMMIT,
     KAFKA_POLL_TIMEOUT_MS,
@@ -21,7 +23,7 @@ def print_to_stderr_and_exit(e: Exception, exit_code: int) -> None:
     exit(exit_code)
 
 
-def _format_message(message) -> dict:
+def _format_message(message: Any) -> dict:
     return {
         "topic": message.topic,
         "timestamp": message.timestamp,
@@ -45,7 +47,7 @@ def _create_consumer(options: Options) -> KafkaConsumer:
 
 
 @contextmanager
-def _open_output(output_file: str):
+def _open_output(output_file: str) -> Generator[TextIO, None, None]:
     if output_file == "-":
         yield sys.stdout
     else:
@@ -78,7 +80,7 @@ def run_service_mode(
     consumer_thread.start()
 
     app = create_app(file_manager)
-    app.run(host="0.0.0.0", port=port)
+    app.run(host=FLASK_HOST, port=port)
 
 
 def run() -> None:
