@@ -5,7 +5,12 @@ import threading
 from kafka import KafkaConsumer
 
 from kafka_collector.args import Options, parse_args
-from kafka_collector.constants import Mode
+from kafka_collector.constants import (
+    KAFKA_AUTO_OFFSET_RESET,
+    KAFKA_ENABLE_AUTO_COMMIT,
+    KAFKA_POLL_TIMEOUT_MS,
+    Mode,
+)
 from kafka_collector.exceptions import ArgumentValidationError
 from kafka_collector.service import FileManager, create_app
 
@@ -83,33 +88,24 @@ def run() -> None:
     try:
         options: Options = parse_args()
     except ArgumentValidationError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    topics = options.topics
-    bootstrap_server = options.bootstrap_server
-    group_id = options.group_id
-    output_file = options.output_file
-    capture_dir = options.capture_dir
-    mode = options.mode
-    port = options.port
+        print_to_stderr_and_exit(e, 1)
 
     try:
         consumer = KafkaConsumer(
-            *topics,
-            bootstrap_servers=bootstrap_server,
-            group_id=group_id,
-            auto_offset_reset="latest",
-            enable_auto_commit=True,
+            *options.topics,
+            bootstrap_servers=options.bootstrap_server,
+            group_id=options.group_id,
+            auto_offset_reset=KAFKA_AUTO_OFFSET_RESET,
+            enable_auto_commit=KAFKA_ENABLE_AUTO_COMMIT,
         )
 
         while not consumer.assignment():
-            consumer.poll(timeout_ms=100)
+            consumer.poll(timeout_ms=KAFKA_POLL_TIMEOUT_MS)
 
-        if mode == Mode.SERVICE:
-            run_service_mode(consumer, capture_dir, port)
+        if options.mode == Mode.SERVICE:
+            run_service_mode(consumer, options.capture_dir, options.port)
         else:
-            run_cli_mode(consumer, output_file)
+            run_cli_mode(consumer, options.output_file)
 
     except Exception as e:
         print_to_stderr_and_exit(e, 1)
