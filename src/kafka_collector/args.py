@@ -3,8 +3,20 @@ import os
 import sys
 import uuid
 from dataclasses import dataclass
+from enum import Enum
 from importlib.metadata import version
 from typing import List
+
+
+class Mode(Enum):
+    CLI = "cli"
+    SERVICE = "service"
+
+
+DEFAULT_BOOTSTRAP_SERVER = "localhost:9092"
+DEFAULT_CAPTURE_DIR = "/tmp/kafka-collector"
+DEFAULT_PORT = 8080
+DEFAULT_MODE = Mode.CLI
 
 
 class ArgumentValidationError(Exception):
@@ -18,7 +30,7 @@ class Options:
     group_id: str
     output_file: str
     capture_dir: str
-    mode: str
+    mode: Mode
     port: int
 
 
@@ -73,7 +85,7 @@ def parse_args() -> Options:
         "-m",
         "--mode",
         default=None,
-        choices=["cli", "service"],
+        choices=[m.value for m in Mode],
         help="run mode: cli or service (default: cli)",
     )
 
@@ -107,7 +119,7 @@ def parse_args() -> Options:
 
     bootstrap_server = (
         args.bootstrap_server if args.bootstrap_server is not None
-        else (env_bootstrap if env_bootstrap else "localhost:9092")
+        else (env_bootstrap if env_bootstrap else DEFAULT_BOOTSTRAP_SERVER)
     )
 
     group_id = (
@@ -115,18 +127,23 @@ def parse_args() -> Options:
         else (env_group if env_group else str(uuid.uuid4()))
     )
 
-    mode_value = args.mode if args.mode is not None else env_mode
-    if mode_value is not None and mode_value not in ["cli", "service"]:
-        raise ArgumentValidationError(
-            f"Invalid mode '{mode_value}'. Must be 'cli' or 'service'"
-        )
-    mode = mode_value if mode_value else "cli"
+    mode_str = args.mode if args.mode is not None else env_mode
+    if mode_str is not None:
+        try:
+            mode = Mode(mode_str)
+        except ValueError:
+            valid_modes = ", ".join([m.value for m in Mode])
+            raise ArgumentValidationError(
+                f"Invalid mode '{mode_str}'. Must be one of: {valid_modes}"
+            )
+    else:
+        mode = DEFAULT_MODE
 
     output_file = args.output if args.output is not None else "-"
 
     capture_dir = (
         args.capture_dir if args.capture_dir is not None
-        else (env_capture_dir if env_capture_dir else "/tmp/kafka-collector")
+        else (env_capture_dir if env_capture_dir else DEFAULT_CAPTURE_DIR)
     )
 
     port_value = args.port
@@ -137,9 +154,9 @@ def parse_args() -> Options:
             raise ArgumentValidationError(
                 f"Invalid COLLECTOR_SERVICE_PORT '{env_port}'. Must be integer"
             )
-    port = port_value if port_value is not None else 8080
+    port = port_value if port_value is not None else DEFAULT_PORT
 
-    if mode == "service":
+    if mode == Mode.SERVICE:
         if args.output is not None:
             print(
                 "Warning: -o/--output will be ignored in service mode",

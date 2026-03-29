@@ -4,7 +4,9 @@ import threading
 
 from kafka import KafkaConsumer
 
-from kafka_collector.args import ArgumentValidationError, Options, parse_args
+from kafka_collector.args import (
+    ArgumentValidationError, Mode, Options, parse_args
+)
 from kafka_collector.service import FileManager, create_app
 
 
@@ -104,7 +106,7 @@ def run() -> None:
         while not consumer.assignment():
             consumer.poll(timeout_ms=100)
 
-        if mode == "service":
+        if mode == Mode.SERVICE:
             run_service_mode(consumer, capture_dir, port)
         else:
             run_cli_mode(consumer, output_file)
