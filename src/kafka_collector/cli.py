@@ -30,6 +30,19 @@ def _format_message(message) -> dict:
     }
 
 
+def _create_consumer(options: Options) -> KafkaConsumer:
+    consumer = KafkaConsumer(
+        *options.topics,
+        bootstrap_servers=options.bootstrap_server,
+        group_id=options.group_id,
+        auto_offset_reset=KAFKA_AUTO_OFFSET_RESET,
+        enable_auto_commit=KAFKA_ENABLE_AUTO_COMMIT,
+    )
+    while not consumer.assignment():
+        consumer.poll(timeout_ms=KAFKA_POLL_TIMEOUT_MS)
+    return consumer
+
+
 def run_cli_mode(
     consumer: KafkaConsumer,
     output_file: str
@@ -75,16 +88,7 @@ def run() -> None:
         print_to_stderr_and_exit(e, 1)
 
     try:
-        consumer = KafkaConsumer(
-            *options.topics,
-            bootstrap_servers=options.bootstrap_server,
-            group_id=options.group_id,
-            auto_offset_reset=KAFKA_AUTO_OFFSET_RESET,
-            enable_auto_commit=KAFKA_ENABLE_AUTO_COMMIT,
-        )
-
-        while not consumer.assignment():
-            consumer.poll(timeout_ms=KAFKA_POLL_TIMEOUT_MS)
+        consumer = _create_consumer(options)
 
         if options.mode == Mode.SERVICE:
             run_service_mode(consumer, options.capture_dir, options.port)
