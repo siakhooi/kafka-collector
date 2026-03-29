@@ -15,7 +15,8 @@ from kafka_collector.constants import (
     Mode,
 )
 from kafka_collector.exceptions import ArgumentValidationError
-from kafka_collector.service import FileManager, create_app
+from kafka_collector.file_manager import FileManager
+from kafka_collector.service import create_app
 
 
 def print_to_stderr_and_exit(e: Exception, exit_code: int) -> None:
