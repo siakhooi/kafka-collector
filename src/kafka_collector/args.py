@@ -18,6 +18,13 @@ DEFAULT_CAPTURE_DIR = "/tmp/kafka-collector"
 DEFAULT_PORT = 8080
 DEFAULT_MODE = Mode.CLI
 
+ENV_TOPICS = "KAFKA_TOPICS"
+ENV_BOOTSTRAP_SERVER = "KAFKA_BOOTSTRAP_SERVER"
+ENV_GROUP = "KAFKA_GROUP"
+ENV_CAPTURE_DIR = "COLLECTOR_CAPTURE_DIR"
+ENV_MODE = "COLLECTOR_MODE"
+ENV_SERVICE_PORT = "COLLECTOR_SERVICE_PORT"
+
 
 class ArgumentValidationError(Exception):
     pass
@@ -99,17 +106,17 @@ def parse_args() -> Options:
 
     args = parser.parse_args()
 
-    env_topics = os.environ.get("KAFKA_TOPICS")
-    env_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVER")
-    env_group = os.environ.get("KAFKA_GROUP")
-    env_capture_dir = os.environ.get("COLLECTOR_CAPTURE_DIR")
-    env_mode = os.environ.get("COLLECTOR_MODE")
-    env_port = os.environ.get("COLLECTOR_SERVICE_PORT")
+    env_topics = os.environ.get(ENV_TOPICS)
+    env_bootstrap = os.environ.get(ENV_BOOTSTRAP_SERVER)
+    env_group = os.environ.get(ENV_GROUP)
+    env_capture_dir = os.environ.get(ENV_CAPTURE_DIR)
+    env_mode = os.environ.get(ENV_MODE)
+    env_port = os.environ.get(ENV_SERVICE_PORT)
 
     topics_str = args.topics if args.topics is not None else env_topics
     if not topics_str:
         raise ArgumentValidationError(
-            "--topics or KAFKA_TOPICS must be provided"
+            f"--topics or {ENV_TOPICS} must be provided"
         )
     topics = [t.strip() for t in topics_str.split(",") if t.strip()]
     if not topics:
@@ -152,7 +159,7 @@ def parse_args() -> Options:
             port_value = int(env_port)
         except ValueError:
             raise ArgumentValidationError(
-                f"Invalid COLLECTOR_SERVICE_PORT '{env_port}'. Must be integer"
+                f"Invalid {ENV_SERVICE_PORT} '{env_port}'. Must be integer"
             )
     port = port_value if port_value is not None else DEFAULT_PORT
 
