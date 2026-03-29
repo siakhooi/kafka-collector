@@ -5,7 +5,21 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum
 from importlib.metadata import version
-from typing import List
+from typing import List, Optional, TypeVar
+
+T = TypeVar('T')
+
+
+def _resolve_value(
+    arg_value: Optional[T],
+    env_value: Optional[str],
+    default: T
+) -> T:
+    if arg_value is not None:
+        return arg_value
+    if env_value:
+        return env_value  # type: ignore
+    return default
 
 
 class Mode(Enum):
@@ -124,14 +138,12 @@ def parse_args() -> Options:
             "--topics must contain at least one topic"
         )
 
-    bootstrap_server = (
-        args.bootstrap_server if args.bootstrap_server is not None
-        else (env_bootstrap if env_bootstrap else DEFAULT_BOOTSTRAP_SERVER)
+    bootstrap_server = _resolve_value(
+        args.bootstrap_server, env_bootstrap, DEFAULT_BOOTSTRAP_SERVER
     )
 
-    group_id = (
-        args.group if args.group is not None
-        else (env_group if env_group else str(uuid.uuid4()))
+    group_id = _resolve_value(
+        args.group, env_group, str(uuid.uuid4())
     )
 
     mode_str = args.mode if args.mode is not None else env_mode
@@ -148,9 +160,8 @@ def parse_args() -> Options:
 
     output_file = args.output if args.output is not None else "-"
 
-    capture_dir = (
-        args.capture_dir if args.capture_dir is not None
-        else (env_capture_dir if env_capture_dir else DEFAULT_CAPTURE_DIR)
+    capture_dir = _resolve_value(
+        args.capture_dir, env_capture_dir, DEFAULT_CAPTURE_DIR
     )
 
     port_value = args.port
