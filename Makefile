@@ -24,7 +24,12 @@ run1-s:
 	poetry run kafka-collector -t topic1,topic2,topic3 -m service
 run1-sc:
 	poetry run kafka-collector -t topic1,topic2,topic3 -m service -c /tmp/kafka-collector1
-
+curl-files:
+	curl localhost:8080/files |jq
+curl-reset:
+	curl -X POST localhost:8080/reset
+curl-reset-name:
+	curl -X POST localhost:8080/reset?name=abc
 set-version:
 	scripts/set-version.sh
 build:

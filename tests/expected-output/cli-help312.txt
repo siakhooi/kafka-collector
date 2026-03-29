@@ -1,5 +1,6 @@
 usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
                        [-o OUTPUT] [-c CAPTURE_DIR] [-m {cli,service}]
+                       [-p PORT]
 
 collect kafka messages from multiple topics
 
@@ -19,3 +20,4 @@ options:
                         /tmp/kafka-collector)
   -m {cli,service}, --mode {cli,service}
                         run mode: cli or service (default: cli)
+  -p PORT, --port PORT  service port for service mode (default: 8080)

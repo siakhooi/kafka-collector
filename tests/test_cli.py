@@ -66,7 +66,7 @@ def test_run_show_version(monkeypatch, capsys, option_version):
     assert captured.out == expected_output
 
 
-@pytest.mark.parametrize("options", [["-p"], ["-p", "-j"]])
+@pytest.mark.parametrize("options", [["-q"], ["-q", "-j"]])
 def test_run_wrong_options(monkeypatch, capsys, options):
     monkeypatch.setattr(
         "sys.argv",

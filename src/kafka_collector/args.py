@@ -19,6 +19,7 @@ class Options:
     output_file: str
     capture_dir: str
     mode: str
+    port: int
 
 
 def parse_args() -> Options:
@@ -76,6 +77,14 @@ def parse_args() -> Options:
         help="run mode: cli or service (default: cli)",
     )
 
+    parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=8080,
+        help="service port for service mode (default: 8080)",
+    )
+
     args = parser.parse_args()
 
     topics = [t.strip() for t in args.topics.split(",") if t.strip()]
@@ -89,6 +98,8 @@ def parse_args() -> Options:
     output_file = args.output
     capture_dir = args.capture_dir
     mode = args.mode
+
+    port = args.port
 
     if mode == "service":
         if args.output != "-":
@@ -108,6 +119,11 @@ def parse_args() -> Options:
                 "Warning: -c/--capture-dir will be ignored in cli mode",
                 file=sys.stderr
             )
+        if args.port != 8080:
+            print(
+                "Warning: -p/--port will be ignored in cli mode",
+                file=sys.stderr
+            )
 
     return Options(
         topics=topics,
@@ -116,4 +132,5 @@ def parse_args() -> Options:
         output_file=output_file,
         capture_dir=capture_dir,
         mode=mode,
+        port=port,
     )
