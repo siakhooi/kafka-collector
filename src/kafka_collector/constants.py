@@ -23,3 +23,8 @@ KAFKA_ENABLE_AUTO_COMMIT = True
 KAFKA_POLL_TIMEOUT_MS = 100
 
 FLASK_HOST = "0.0.0.0"
+
+# Service-mode rolling capture files (UTC; see FileManager._generate_filepath)
+CAPTURE_FILENAME_PREFIX = "kafka-collector_"
+CAPTURE_FILENAME_EXTENSION = ".jsonl"
+CAPTURE_FILENAME_TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S_%f"

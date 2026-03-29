@@ -2,19 +2,19 @@ import os
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import TextIO, TypedDict
+from typing import TextIO
 
+from kafka_collector.constants import (
+    CAPTURE_FILENAME_EXTENSION,
+    CAPTURE_FILENAME_PREFIX,
+    CAPTURE_FILENAME_TIMESTAMP_FORMAT,
+)
 from kafka_collector.exceptions import (
     CaptureNameNotFoundError,
     DuplicateCaptureNameError,
     NoCompletedCapturesError,
 )
-
-
-class CompletedCapture(TypedDict):
-    name: str
-    path: str
-    completed_at: str
+from kafka_collector.models import CompletedCapture
 
 
 class FileManager:
@@ -26,8 +26,12 @@ class FileManager:
         self.lock = threading.Lock()
 
     def _generate_filepath(self) -> str:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-        filename = f"kafka-collector_{timestamp}.jsonl"
+        timestamp = datetime.now(timezone.utc).strftime(
+            CAPTURE_FILENAME_TIMESTAMP_FORMAT
+        )
+        filename = (
+            f"{CAPTURE_FILENAME_PREFIX}{timestamp}{CAPTURE_FILENAME_EXTENSION}"
+        )
         return os.path.join(self.capture_dir, filename)
 
     def _completed_entry(self, file_name: str, path: str) -> CompletedCapture:
