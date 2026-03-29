@@ -9,13 +9,19 @@ pip install kafka_collector
 ## Usage
 ```
 $ kafka-collector -h
-usage: kafka-collector [-h] [-v]
+usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
+                       [-o OUTPUT]
 
 collect kafka messages from multiple topics
 
 options:
-  -h, --help     show this help message and exit
-  -v, --version  show program's version number and exit
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -t, --topics TOPICS   comma separated list of kafka topics to be listened to
+  -b, --bootstrap-server BOOTSTRAP_SERVER
+                        kafka bootstrap server (default: localhost:9092)
+  -g, --group GROUP     consumer group id (default: random uuid)
+  -o, --output OUTPUT   output file path, use '-' for stdout (default: stdout)
 
 ```
 
@@ -36,7 +42,6 @@ options:
 ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/siakhooi/kafka-collector?logo=github)
 ![GitHub top language](https://img.shields.io/github/languages/top/siakhooi/kafka-collector?logo=github)
 ![GitHub language count](https://img.shields.io/github/languages/count/siakhooi/kafka-collector?logo=github)
-![Lines of code](https://img.shields.io/tokei/lines/github/siakhooi/kafka-collector?logo=github)
 ![GitHub repo size](https://img.shields.io/github/repo-size/siakhooi/kafka-collector?logo=github)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/siakhooi/kafka-collector?logo=github)
 
