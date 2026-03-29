@@ -2,9 +2,9 @@ import io
 import os
 import re
 import zipfile
-from typing import Any
 
 from flask import Flask, request, jsonify, send_file
+from flask.typing import ResponseReturnValue
 
 from kafka_collector.constants import (
     DEFAULT_DOWNLOAD_KIND,
@@ -29,7 +29,7 @@ MAX_CAPTURE_NAME_LEN = 256
 _NAME_ALLOWED = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
 
-def _json_error(message: str, status: int) -> Any:
+def _json_error(message: str, status: int) -> ResponseReturnValue:
     return jsonify({"error": message}), status
 
 
@@ -73,7 +73,7 @@ def create_app(file_manager: FileManager) -> Flask:
     app = Flask(__name__)
 
     @app.route("/reset", methods=["POST"])
-    def reset() -> Any:
+    def reset() -> ResponseReturnValue:
         err, name = _parse_name_args(request.args.getlist("name"))
         if err:
             return _json_error(err, 400)
@@ -87,12 +87,12 @@ def create_app(file_manager: FileManager) -> Flask:
             return _json_error(str(e), 400)
 
     @app.route("/files", methods=["GET"])
-    def get_files() -> Any:
+    def get_files() -> ResponseReturnValue:
         files = file_manager.get_files()
         return jsonify(files)
 
     @app.route("/download", methods=["GET"])
-    def download() -> Any:
+    def download() -> ResponseReturnValue:
         err, name = _parse_name_args(request.args.getlist("name"))
         if err:
             return _json_error(err, 400)
