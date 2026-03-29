@@ -16,10 +16,16 @@ run1-o:
 	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl
 # expect warning
 run1-oc:
-	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -c /tmp/kafka-collector1
+	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -c /tmp/kafka-collector
+# expect warning
+run1-op:
+	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -p 8080
 # expect warning
 run1-so:
 	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -m service
+# expect warning
+run1-so1:
+	poetry run kafka-collector -t topic1,topic2,topic3 -o - -m service
 run1-s:
 	poetry run kafka-collector -t topic1,topic2,topic3 -m service
 run1-sc:

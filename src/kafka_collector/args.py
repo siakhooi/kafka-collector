@@ -57,14 +57,14 @@ def parse_args() -> Options:
     parser.add_argument(
         "-o",
         "--output",
-        default="-",
+        default=None,
         help="output file path, use '-' for stdout (default: stdout)",
     )
 
     parser.add_argument(
         "-c",
         "--capture-dir",
-        default="/tmp/kafka-collector",
+        default=None,
         help="capture directory for service mode "
         "(default: /tmp/kafka-collector)",
     )
@@ -81,7 +81,7 @@ def parse_args() -> Options:
         "-p",
         "--port",
         type=int,
-        default=8080,
+        default=None,
         help="service port for service mode (default: 8080)",
     )
 
@@ -95,14 +95,15 @@ def parse_args() -> Options:
 
     bootstrap_server = args.bootstrap_server
     group_id = args.group if args.group else str(uuid.uuid4())
-    output_file = args.output
-    capture_dir = args.capture_dir
     mode = args.mode
 
-    port = args.port
+    output_file = args.output if args.output is not None else "-"
+    capture_dir = args.capture_dir if args.capture_dir is not None \
+        else "/tmp/kafka-collector"
+    port = args.port if args.port is not None else 8080
 
     if mode == "service":
-        if args.output != "-":
+        if args.output is not None:
             print(
                 "Warning: -o/--output will be ignored in service mode",
                 file=sys.stderr
@@ -114,12 +115,12 @@ def parse_args() -> Options:
                 f"Failed to create capture directory '{capture_dir}': {e}"
             )
     else:
-        if args.capture_dir != "/tmp/kafka-collector":
+        if args.capture_dir is not None:
             print(
                 "Warning: -c/--capture-dir will be ignored in cli mode",
                 file=sys.stderr
             )
-        if args.port != 8080:
+        if args.port is not None:
             print(
                 "Warning: -p/--port will be ignored in cli mode",
                 file=sys.stderr
