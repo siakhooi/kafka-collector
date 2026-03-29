@@ -28,3 +28,13 @@ FLASK_HOST = "0.0.0.0"
 CAPTURE_FILENAME_PREFIX = "kafka-collector_"
 CAPTURE_FILENAME_EXTENSION = ".jsonl"
 CAPTURE_FILENAME_TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S_%f"
+
+# HTTP download (service mode)
+DOWNLOAD_KIND_JSONL = "jsonl"
+DOWNLOAD_KIND_ZIP = "zip"
+DEFAULT_DOWNLOAD_KIND = DOWNLOAD_KIND_JSONL
+DOWNLOAD_KINDS: frozenset[str] = frozenset(
+    {DOWNLOAD_KIND_JSONL, DOWNLOAD_KIND_ZIP},
+)
+MIME_TYPE_JSONL = "application/jsonl"
+MIME_TYPE_ZIP = "application/zip"

@@ -6,6 +6,13 @@ from typing import Any
 
 from flask import Flask, request, jsonify, send_file
 
+from kafka_collector.constants import (
+    DEFAULT_DOWNLOAD_KIND,
+    DOWNLOAD_KINDS,
+    DOWNLOAD_KIND_ZIP,
+    MIME_TYPE_JSONL,
+    MIME_TYPE_ZIP,
+)
 from kafka_collector.exceptions import (
     CaptureNameNotFoundError,
     DuplicateCaptureNameError,
@@ -13,6 +20,10 @@ from kafka_collector.exceptions import (
     NoCompletedCapturesError,
 )
 from kafka_collector.file_manager import FileManager
+
+_DOWNLOAD_TYPE_ERROR = (
+    "type must be " + " or ".join(sorted(DOWNLOAD_KINDS))
+)
 
 MAX_CAPTURE_NAME_LEN = 256
 _NAME_ALLOWED = re.compile(r"^[a-zA-Z0-9_.-]+$")
@@ -42,15 +53,15 @@ def _parse_name_args(raw_values: list[str]) -> tuple[str | None, str | None]:
 
 def _parse_type_args(raw_values: list[str]) -> tuple[str | None, str]:
     """Validate ``type`` query values. Returns ``(error_message, kind)`` where
-    ``kind`` is ``jsonl`` or ``zip`` when there is no error.
+    ``kind`` is a member of ``DOWNLOAD_KINDS`` when there is no error.
     """
     if len(raw_values) > 1:
-        return ("duplicate type parameter", "jsonl")
+        return ("duplicate type parameter", DEFAULT_DOWNLOAD_KIND)
     if not raw_values:
-        return (None, "jsonl")
+        return (None, DEFAULT_DOWNLOAD_KIND)
     t = raw_values[0].strip().lower()
-    if t not in ("jsonl", "zip"):
-        return ("type must be jsonl or zip", "jsonl")
+    if t not in DOWNLOAD_KINDS:
+        return (_DOWNLOAD_TYPE_ERROR, DEFAULT_DOWNLOAD_KIND)
     return (None, t)
 
 
@@ -96,7 +107,7 @@ def create_app(file_manager: FileManager) -> Flask:
             if not os.path.exists(filepath):
                 return jsonify({"error": f"file not found: {filepath}"}), 404
 
-            if file_type == "zip":
+            if file_type == DOWNLOAD_KIND_ZIP:
                 zip_buffer = io.BytesIO()
                 zf = zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED)
                 zf.write(filepath, os.path.basename(filepath))
@@ -104,14 +115,14 @@ def create_app(file_manager: FileManager) -> Flask:
                 zip_buffer.seek(0)
                 return send_file(
                     zip_buffer,
-                    mimetype="application/zip",
+                    mimetype=MIME_TYPE_ZIP,
                     as_attachment=True,
                     download_name=f"{download_name}.zip"
                 )
             else:
                 return send_file(
                     filepath,
-                    mimetype="application/jsonl",
+                    mimetype=MIME_TYPE_JSONL,
                     as_attachment=True,
                     download_name=os.path.basename(filepath)
                 )
