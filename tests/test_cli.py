@@ -45,7 +45,7 @@ def test_run_show_version(monkeypatch, capsys, option_version):
 def test_run_wrong_options(monkeypatch, capsys, options):
     monkeypatch.setattr(
         "sys.argv",
-        ["kafka-collector"] + options,
+        ["kafka-collector", "-t", "xxx"] + options,
     )
 
     with pytest.raises(SystemExit) as pytest_wrapped_e:

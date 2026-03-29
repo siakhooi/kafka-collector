@@ -5,6 +5,12 @@ clean:
 	tests/__pycache__
 run:
 	poetry run kafka-collector
+run-help:
+	poetry run kafka-collector -h
+run-p:
+	poetry run kafka-collector -t xx -p
+run1:
+	poetry run kafka-collector -t topic1,topic2,topic3
 set-version:
 	scripts/set-version.sh
 build:
