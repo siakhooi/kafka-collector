@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import re
 import zipfile
@@ -7,6 +8,8 @@ from flask import Flask, request, jsonify, send_file
 from flask.typing import ResponseReturnValue
 
 from kafka_collector.constants import (
+    API_ERROR_CAPTURE_FILE_MISSING,
+    API_JSON_ERROR_KEY,
     DEFAULT_DOWNLOAD_KIND,
     DOWNLOAD_KINDS,
     DOWNLOAD_KIND_ZIP,
@@ -21,6 +24,8 @@ from kafka_collector.exceptions import (
 )
 from kafka_collector.file_manager import FileManager
 
+logger = logging.getLogger(__name__)
+
 _DOWNLOAD_TYPE_ERROR = (
     "type must be " + " or ".join(sorted(DOWNLOAD_KINDS))
 )
@@ -29,8 +34,12 @@ MAX_CAPTURE_NAME_LEN = 256
 _NAME_ALLOWED = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
 
+def _error_payload(message: str) -> dict[str, str]:
+    return {API_JSON_ERROR_KEY: message}
+
+
 def _json_error(message: str, status: int) -> ResponseReturnValue:
-    return jsonify({"error": message}), status
+    return jsonify(_error_payload(message)), status
 
 
 def _parse_name_args(raw_values: list[str]) -> tuple[str | None, str | None]:
@@ -109,7 +118,11 @@ def create_app(file_manager: FileManager) -> Flask:
                     file_manager.get_last_completed_file()
 
             if not os.path.exists(filepath):
-                return _json_error(f"file not found: {filepath}", 404)
+                logger.warning(
+                    "Capture path recorded but file missing on disk: %s",
+                    filepath,
+                )
+                return _json_error(API_ERROR_CAPTURE_FILE_MISSING, 404)
 
             if file_type == DOWNLOAD_KIND_ZIP:
                 zip_buffer = io.BytesIO()

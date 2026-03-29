@@ -38,3 +38,9 @@ DOWNLOAD_KINDS: frozenset[str] = frozenset(
 )
 MIME_TYPE_JSONL = "application/jsonl"
 MIME_TYPE_ZIP = "application/zip"
+
+# HTTP JSON API (service mode)
+API_JSON_ERROR_KEY = "error"
+API_ERROR_CAPTURE_FILE_MISSING = (
+    "capture file is missing or inaccessible"
+)
