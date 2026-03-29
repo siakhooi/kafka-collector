@@ -2,7 +2,12 @@ import os
 import threading
 import uuid
 from datetime import datetime
-from typing import IO, List, Dict, Tuple
+from typing import IO, TypedDict
+
+
+class CompletedCapture(TypedDict):
+    name: str
+    path: str
 
 
 class FileManager:
@@ -10,7 +15,7 @@ class FileManager:
         self.capture_dir = capture_dir
         self.current_file: IO | None = None
         self.current_filepath: str | None = None
-        self.completed_files: List[Dict[str, str]] = []
+        self.completed_files: list[CompletedCapture] = []
         self.lock = threading.Lock()
 
     def _generate_filepath(self) -> str:
@@ -49,12 +54,12 @@ class FileManager:
                 self.current_file.close()
                 self.completed_files.append({
                     "name": file_name,
-                    "path": self.current_filepath
+                    "path": self.current_filepath,
                 })
 
             return self._start_new_capture_unlocked()
 
-    def get_files(self) -> List[Dict[str, str]]:
+    def get_files(self) -> list[CompletedCapture]:
         with self.lock:
             return list(self.completed_files)
 
@@ -65,7 +70,7 @@ class FileManager:
                     return f["path"]
             raise ValueError(f"name '{name}' not found")
 
-    def get_last_completed_file(self) -> Tuple[str, str]:
+    def get_last_completed_file(self) -> tuple[str, str]:
         with self.lock:
             if not self.completed_files:
                 raise ValueError("no completed files")
