@@ -36,6 +36,59 @@ def _resolve_value(
     return default
 
 
+def _warn_ignored(option: str, mode: str) -> None:
+    print(f"Warning: {option} will be ignored in {mode} mode", file=sys.stderr)
+
+
+def _resolve_topics(
+    arg_topics: Optional[str],
+    env_topics: Optional[str]
+) -> List[str]:
+    topics_str = arg_topics if arg_topics is not None else env_topics
+    if not topics_str:
+        raise ArgumentValidationError(
+            f"--topics or {ENV_TOPICS} must be provided"
+        )
+    topics = [t.strip() for t in topics_str.split(",") if t.strip()]
+    if not topics:
+        raise ArgumentValidationError(
+            "--topics must contain at least one topic"
+        )
+    return topics
+
+
+def _resolve_mode(
+    arg_mode: Optional[str],
+    env_mode: Optional[str]
+) -> Mode:
+    mode_str = arg_mode if arg_mode is not None else env_mode
+    if mode_str is not None:
+        try:
+            return Mode(mode_str)
+        except ValueError:
+            valid_modes = ", ".join([m.value for m in Mode])
+            raise ArgumentValidationError(
+                f"Invalid mode '{mode_str}'. Must be one of: {valid_modes}"
+            )
+    return DEFAULT_MODE
+
+
+def _resolve_port(
+    arg_port: Optional[int],
+    env_port: Optional[str]
+) -> int:
+    if arg_port is not None:
+        return arg_port
+    if env_port:
+        try:
+            return int(env_port)
+        except ValueError:
+            raise ArgumentValidationError(
+                f"Invalid {ENV_SERVICE_PORT} '{env_port}'. Must be integer"
+            )
+    return DEFAULT_PORT
+
+
 @dataclass
 class Options:
     topics: List[str] = field(default_factory=list)
@@ -92,55 +145,29 @@ def _create_parser() -> argparse.ArgumentParser:
 
 
 def _resolve_options(args: argparse.Namespace) -> Options:
-    env_topics = os.environ.get(ENV_TOPICS)
-    env_bootstrap = os.environ.get(ENV_BOOTSTRAP_SERVER)
-    env_group = os.environ.get(ENV_GROUP)
-    env_capture_dir = os.environ.get(ENV_CAPTURE_DIR)
-    env_mode = os.environ.get(ENV_MODE)
-    env_port = os.environ.get(ENV_SERVICE_PORT)
-
-    topics_str = args.topics if args.topics is not None else env_topics
-    if not topics_str:
-        raise ArgumentValidationError(
-            f"--topics or {ENV_TOPICS} must be provided"
-        )
-    topics = [t.strip() for t in topics_str.split(",") if t.strip()]
-    if not topics:
-        raise ArgumentValidationError(
-            "--topics must contain at least one topic"
-        )
-
-    bootstrap_server = _resolve_value(
-        args.bootstrap_server, env_bootstrap, DEFAULT_BOOTSTRAP_SERVER
+    topics = _resolve_topics(
+        args.topics, os.environ.get(ENV_TOPICS)
     )
-    group_id = _resolve_value(args.group, env_group, str(uuid.uuid4()))
-
-    mode_str = args.mode if args.mode is not None else env_mode
-    if mode_str is not None:
-        try:
-            mode = Mode(mode_str)
-        except ValueError:
-            valid_modes = ", ".join([m.value for m in Mode])
-            raise ArgumentValidationError(
-                f"Invalid mode '{mode_str}'. Must be one of: {valid_modes}"
-            )
-    else:
-        mode = DEFAULT_MODE
-
+    bootstrap_server = _resolve_value(
+        args.bootstrap_server,
+        os.environ.get(ENV_BOOTSTRAP_SERVER),
+        DEFAULT_BOOTSTRAP_SERVER
+    )
+    group_id = _resolve_value(
+        args.group, os.environ.get(ENV_GROUP), str(uuid.uuid4())
+    )
+    mode = _resolve_mode(
+        args.mode, os.environ.get(ENV_MODE)
+    )
     output_file = args.output if args.output is not None else "-"
     capture_dir = _resolve_value(
-        args.capture_dir, env_capture_dir, DEFAULT_CAPTURE_DIR
+        args.capture_dir,
+        os.environ.get(ENV_CAPTURE_DIR),
+        DEFAULT_CAPTURE_DIR
     )
-
-    port_value = args.port
-    if port_value is None and env_port:
-        try:
-            port_value = int(env_port)
-        except ValueError:
-            raise ArgumentValidationError(
-                f"Invalid {ENV_SERVICE_PORT} '{env_port}'. Must be integer"
-            )
-    port = port_value if port_value is not None else DEFAULT_PORT
+    port = _resolve_port(
+        args.port, os.environ.get(ENV_SERVICE_PORT)
+    )
 
     return Options(
         topics=topics,
@@ -159,10 +186,7 @@ def _validate_mode_options(
 ) -> None:
     if options.mode == Mode.SERVICE:
         if args.output is not None:
-            print(
-                "Warning: -o/--output will be ignored in service mode",
-                file=sys.stderr
-            )
+            _warn_ignored("-o/--output", "service")
         try:
             os.makedirs(options.capture_dir, exist_ok=True)
         except OSError as e:
@@ -172,15 +196,9 @@ def _validate_mode_options(
             )
     else:
         if args.capture_dir is not None:
-            print(
-                "Warning: -c/--capture-dir will be ignored in cli mode",
-                file=sys.stderr
-            )
+            _warn_ignored("-c/--capture-dir", "cli")
         if args.port is not None:
-            print(
-                "Warning: -p/--port will be ignored in cli mode",
-                file=sys.stderr
-            )
+            _warn_ignored("-p/--port", "cli")
 
 
 def parse_args() -> Options:
