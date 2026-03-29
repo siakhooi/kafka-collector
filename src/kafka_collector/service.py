@@ -42,6 +42,16 @@ def create_app(file_manager: FileManager) -> Flask:
         files = file_manager.get_files()
         return jsonify(files)
 
+    def _handle_download(
+        name: str | None,
+        file_type: str,
+    ) -> ResponseReturnValue:
+        download_name, filepath = resolve_download_target(file_manager, name)
+        missing = response_if_capture_missing(filepath)
+        if missing is not None:
+            return missing
+        return send_capture_file(filepath, download_name, file_type)
+
     @app.route("/download", methods=["GET"])
     def download() -> ResponseReturnValue:
         err, name = parse_name_args(request.args.getlist("name"))
@@ -52,18 +62,7 @@ def create_app(file_manager: FileManager) -> Flask:
             return json_error(err_type, 400)
 
         try:
-            download_name, filepath = resolve_download_target(
-                file_manager,
-                name,
-            )
-            missing = response_if_capture_missing(filepath)
-            if missing is not None:
-                return missing
-            return send_capture_file(
-                filepath,
-                download_name,
-                file_type,
-            )
+            return _handle_download(name, file_type)
         except CaptureNameNotFoundError as e:
             return json_error(str(e), 404)
         except NoCompletedCapturesError as e:
