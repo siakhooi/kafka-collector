@@ -20,6 +20,16 @@ def print_to_stderr_and_exit(e: Exception, exit_code: int) -> None:
     exit(exit_code)
 
 
+def _format_message(message) -> dict:
+    return {
+        "topic": message.topic,
+        "timestamp": message.timestamp,
+        "header": dict(message.headers) if message.headers else {},
+        "value": message.value.decode("utf-8") if message.value else None,
+        "key": message.key.decode("utf-8") if message.key else None,
+    }
+
+
 def run_cli_mode(
     consumer: KafkaConsumer,
     output_file: str
@@ -33,20 +43,7 @@ def run_cli_mode(
 
     try:
         for message in consumer:
-            output = {
-                "topic": message.topic,
-                "timestamp": message.timestamp,
-                "header": dict(message.headers) if message.headers else {},
-                "value": (
-                    message.value.decode("utf-8")
-                    if message.value else None
-                ),
-                "key": (
-                    message.key.decode("utf-8")
-                    if message.key else None
-                ),
-            }
-            print(json.dumps(output), file=out, flush=True)
+            print(json.dumps(_format_message(message)), file=out, flush=True)
     finally:
         if should_close:
             out.close()
@@ -62,20 +59,7 @@ def run_service_mode(
 
     def consume_messages() -> None:
         for message in consumer:
-            output = {
-                "topic": message.topic,
-                "timestamp": message.timestamp,
-                "header": dict(message.headers) if message.headers else {},
-                "value": (
-                    message.value.decode("utf-8")
-                    if message.value else None
-                ),
-                "key": (
-                    message.key.decode("utf-8")
-                    if message.key else None
-                ),
-            }
-            file_manager.write(json.dumps(output) + "\n")
+            file_manager.write(json.dumps(_format_message(message)) + "\n")
 
     consumer_thread = threading.Thread(target=consume_messages, daemon=True)
     consumer_thread.start()
