@@ -55,71 +55,51 @@ class Options:
     port: int
 
 
-def parse_args() -> Options:
+def _create_parser() -> argparse.ArgumentParser:
     __version__: str = version("kafka-collector")
 
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="collect kafka messages from multiple topics"
     )
 
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {__version__}"
     )
-
     parser.add_argument(
-        "-t",
-        "--topics",
-        default=None,
+        "-t", "--topics", default=None,
         help="comma separated list of kafka topics to be listened to",
     )
-
     parser.add_argument(
-        "-b",
-        "--bootstrap-server",
-        default=None,
+        "-b", "--bootstrap-server", default=None,
         help="kafka bootstrap server (default: localhost:9092)",
     )
-
     parser.add_argument(
-        "-g",
-        "--group",
-        default=None,
+        "-g", "--group", default=None,
         help="consumer group id (default: random uuid)",
     )
-
     parser.add_argument(
-        "-o",
-        "--output",
-        default=None,
+        "-o", "--output", default=None,
         help="output file path, use '-' for stdout (default: stdout)",
     )
-
     parser.add_argument(
-        "-c",
-        "--capture-dir",
-        default=None,
+        "-c", "--capture-dir", default=None,
         help="capture directory for service mode "
         "(default: /tmp/kafka-collector)",
     )
-
     parser.add_argument(
-        "-m",
-        "--mode",
-        default=None,
+        "-m", "--mode", default=None,
         choices=[m.value for m in Mode],
         help="run mode: cli or service (default: cli)",
     )
-
     parser.add_argument(
-        "-p",
-        "--port",
-        type=int,
-        default=None,
+        "-p", "--port", type=int, default=None,
         help="service port for service mode (default: 8080)",
     )
 
-    args = parser.parse_args()
+    return parser
 
+
+def _resolve_options(args: argparse.Namespace) -> Options:
     env_topics = os.environ.get(ENV_TOPICS)
     env_bootstrap = os.environ.get(ENV_BOOTSTRAP_SERVER)
     env_group = os.environ.get(ENV_GROUP)
@@ -141,10 +121,7 @@ def parse_args() -> Options:
     bootstrap_server = _resolve_value(
         args.bootstrap_server, env_bootstrap, DEFAULT_BOOTSTRAP_SERVER
     )
-
-    group_id = _resolve_value(
-        args.group, env_group, str(uuid.uuid4())
-    )
+    group_id = _resolve_value(args.group, env_group, str(uuid.uuid4()))
 
     mode_str = args.mode if args.mode is not None else env_mode
     if mode_str is not None:
@@ -159,7 +136,6 @@ def parse_args() -> Options:
         mode = DEFAULT_MODE
 
     output_file = args.output if args.output is not None else "-"
-
     capture_dir = _resolve_value(
         args.capture_dir, env_capture_dir, DEFAULT_CAPTURE_DIR
     )
@@ -174,17 +150,33 @@ def parse_args() -> Options:
             )
     port = port_value if port_value is not None else DEFAULT_PORT
 
-    if mode == Mode.SERVICE:
+    return Options(
+        topics=topics,
+        bootstrap_server=bootstrap_server,
+        group_id=group_id,
+        output_file=output_file,
+        capture_dir=capture_dir,
+        mode=mode,
+        port=port,
+    )
+
+
+def _validate_mode_options(
+    args: argparse.Namespace,
+    options: Options
+) -> None:
+    if options.mode == Mode.SERVICE:
         if args.output is not None:
             print(
                 "Warning: -o/--output will be ignored in service mode",
                 file=sys.stderr
             )
         try:
-            os.makedirs(capture_dir, exist_ok=True)
+            os.makedirs(options.capture_dir, exist_ok=True)
         except OSError as e:
             raise ArgumentValidationError(
-                f"Failed to create capture directory '{capture_dir}': {e}"
+                f"Failed to create capture directory "
+                f"'{options.capture_dir}': {e}"
             )
     else:
         if args.capture_dir is not None:
@@ -198,12 +190,10 @@ def parse_args() -> Options:
                 file=sys.stderr
             )
 
-    return Options(
-        topics=topics,
-        bootstrap_server=bootstrap_server,
-        group_id=group_id,
-        output_file=output_file,
-        capture_dir=capture_dir,
-        mode=mode,
-        port=port,
-    )
+
+def parse_args() -> Options:
+    parser = _create_parser()
+    args = parser.parse_args()
+    options = _resolve_options(args)
+    _validate_mode_options(args, options)
+    return options
