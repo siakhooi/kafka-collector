@@ -7,12 +7,23 @@ run:
 	poetry run kafka-collector
 run-help:
 	poetry run kafka-collector -h
+# expect error
 run-p:
 	poetry run kafka-collector -t xx -p
 run1:
 	poetry run kafka-collector -t topic1,topic2,topic3
 run1-o:
 	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl
+# expect warning
+run1-oc:
+	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -c /tmp/kafka-collector1
+# expect warning
+run1-so:
+	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -m service
+run1-s:
+	poetry run kafka-collector -t topic1,topic2,topic3 -m service
+run1-sc:
+	poetry run kafka-collector -t topic1,topic2,topic3 -m service -c /tmp/kafka-collector1
 
 set-version:
 	scripts/set-version.sh

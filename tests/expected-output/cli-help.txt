@@ -1,5 +1,5 @@
 usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
-                       [-o OUTPUT]
+                       [-o OUTPUT] [-c CAPTURE_DIR] [-m {cli,service}]
 
 collect kafka messages from multiple topics
 
@@ -11,3 +11,8 @@ options:
                         kafka bootstrap server (default: localhost:9092)
   -g, --group GROUP     consumer group id (default: random uuid)
   -o, --output OUTPUT   output file path, use '-' for stdout (default: stdout)
+  -c, --capture-dir CAPTURE_DIR
+                        capture directory for service mode (default:
+                        /tmp/kafka-collector)
+  -m, --mode {cli,service}
+                        run mode: cli or service (default: cli)

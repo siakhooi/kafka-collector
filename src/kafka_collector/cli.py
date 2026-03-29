@@ -1,5 +1,7 @@
 import json
+import os
 import sys
+from datetime import datetime
 
 from kafka import KafkaConsumer
 
@@ -22,6 +24,8 @@ def run() -> None:
     bootstrap_server = options.bootstrap_server
     group_id = options.group_id
     output_file = options.output_file
+    capture_dir = options.capture_dir
+    mode = options.mode
 
     try:
         consumer = KafkaConsumer(
@@ -35,7 +39,13 @@ def run() -> None:
         while not consumer.assignment():
             consumer.poll(timeout_ms=100)
 
-        if output_file == "-":
+        if mode == "service":
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            filename = f"kafka-collector_{timestamp}.jsonl"
+            filepath = os.path.join(capture_dir, filename)
+            out = open(filepath, "a")
+            should_close = True
+        elif output_file == "-":
             out = sys.stdout
             should_close = False
         else:
