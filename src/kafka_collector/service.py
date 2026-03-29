@@ -1,10 +1,12 @@
+import io
 import os
 import threading
 import uuid
+import zipfile
 from datetime import datetime
-from typing import IO, List, Dict, Any
+from typing import IO, List, Dict, Any, Tuple
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 
 
 class FileManager:
@@ -59,6 +61,20 @@ class FileManager:
         with self.lock:
             return list(self.completed_files)
 
+    def get_file_by_name(self, name: str) -> str:
+        with self.lock:
+            for f in self.completed_files:
+                if f["name"] == name:
+                    return f["path"]
+            raise ValueError(f"name '{name}' not found")
+
+    def get_last_completed_file(self) -> Tuple[str, str]:
+        with self.lock:
+            if not self.completed_files:
+                raise ValueError("no completed files")
+            last = self.completed_files[-1]
+            return last["name"], last["path"]
+
     def close(self) -> None:
         with self.lock:
             if self.current_file:
@@ -85,5 +101,43 @@ def create_app(file_manager: FileManager) -> Flask:
     def get_files() -> Any:
         files = file_manager.get_files()
         return jsonify(files)
+
+    @app.route("/download", methods=["GET"])
+    def download() -> Any:
+        name = request.args.get("name")
+        file_type = request.args.get("type", "jsonl")
+
+        try:
+            if name:
+                filepath = file_manager.get_file_by_name(name)
+                download_name = name
+            else:
+                download_name, filepath = \
+                    file_manager.get_last_completed_file()
+
+            if not os.path.exists(filepath):
+                return jsonify({"error": f"file not found: {filepath}"}), 404
+
+            if file_type == "zip":
+                zip_buffer = io.BytesIO()
+                zf = zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED)
+                zf.write(filepath, os.path.basename(filepath))
+                zf.close()
+                zip_buffer.seek(0)
+                return send_file(
+                    zip_buffer,
+                    mimetype="application/zip",
+                    as_attachment=True,
+                    download_name=f"{download_name}.zip"
+                )
+            else:
+                return send_file(
+                    filepath,
+                    mimetype="application/jsonl",
+                    as_attachment=True,
+                    download_name=os.path.basename(filepath)
+                )
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 404
 
     return app

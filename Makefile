@@ -39,6 +39,14 @@ curl-reset:
 	curl -X POST localhost:8080/reset
 curl-reset-name:
 	curl -X POST localhost:8080/reset?name=abc
+curl-download:
+	curl localhost:8080/download
+curl-download-name:
+	curl localhost:8080/download?name=abc
+curl-download-zip:
+	curl localhost:8080/download?type=zip -o download.zip
+curl-download-zip-name:
+	curl "localhost:8080/download?type=zip&name=abc" -o download.zip
 set-version:
 	scripts/set-version.sh
 build:
