@@ -79,7 +79,10 @@ def _send_capture_file(
 
 
 def create_app(file_manager: FileManager) -> Flask:
-    app = Flask(__name__)
+    # Programmatic operator/automation API: no cookie-based session auth;
+    # the usual browser CSRF scenario does not apply. Restrict exposure in
+    # prod (bind address, firewall, reverse-proxy auth). Sonar: python:S4502.
+    app = Flask(__name__)  # NOSONAR
 
     @app.route("/reset", methods=["POST"])
     def reset() -> ResponseReturnValue:
