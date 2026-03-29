@@ -4,6 +4,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import IO, TypedDict
 
+from kafka_collector.exceptions import (
+    CaptureNameNotFoundError,
+    NoCompletedCapturesError,
+)
+
 
 class CompletedCapture(TypedDict):
     name: str
@@ -70,12 +75,12 @@ class FileManager:
             for f in self.completed_files:
                 if f["name"] == name:
                     return f["path"]
-            raise ValueError(f"name '{name}' not found")
+            raise CaptureNameNotFoundError(f"name '{name}' not found")
 
     def get_last_completed_file(self) -> tuple[str, str]:
         with self.lock:
             if not self.completed_files:
-                raise ValueError("no completed files")
+                raise NoCompletedCapturesError("no completed files")
             last = self.completed_files[-1]
             return last["name"], last["path"]
 
