@@ -29,6 +29,10 @@ MAX_CAPTURE_NAME_LEN = 256
 _NAME_ALLOWED = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
 
+def _json_error(message: str, status: int) -> Any:
+    return jsonify({"error": message}), status
+
+
 def _parse_name_args(raw_values: list[str]) -> tuple[str | None, str | None]:
     """Validate ``name`` query values. Returns ``(error_message, name)``.
     ``name`` is ``None`` when the parameter is absent; otherwise it is stripped
@@ -72,7 +76,7 @@ def create_app(file_manager: FileManager) -> Flask:
     def reset() -> Any:
         err, name = _parse_name_args(request.args.getlist("name"))
         if err:
-            return jsonify({"error": err}), 400
+            return _json_error(err, 400)
         try:
             new_filepath = file_manager.reset(name)
             return jsonify({
@@ -80,7 +84,7 @@ def create_app(file_manager: FileManager) -> Flask:
                 "new_file": new_filepath
             })
         except (DuplicateCaptureNameError, EmptyCaptureNameError) as e:
-            return jsonify({"error": str(e)}), 400
+            return _json_error(str(e), 400)
 
     @app.route("/files", methods=["GET"])
     def get_files() -> Any:
@@ -91,10 +95,10 @@ def create_app(file_manager: FileManager) -> Flask:
     def download() -> Any:
         err, name = _parse_name_args(request.args.getlist("name"))
         if err:
-            return jsonify({"error": err}), 400
+            return _json_error(err, 400)
         err_type, file_type = _parse_type_args(request.args.getlist("type"))
         if err_type:
-            return jsonify({"error": err_type}), 400
+            return _json_error(err_type, 400)
 
         try:
             if name:
@@ -105,13 +109,14 @@ def create_app(file_manager: FileManager) -> Flask:
                     file_manager.get_last_completed_file()
 
             if not os.path.exists(filepath):
-                return jsonify({"error": f"file not found: {filepath}"}), 404
+                return _json_error(f"file not found: {filepath}", 404)
 
             if file_type == DOWNLOAD_KIND_ZIP:
                 zip_buffer = io.BytesIO()
-                zf = zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED)
-                zf.write(filepath, os.path.basename(filepath))
-                zf.close()
+                with zipfile.ZipFile(
+                    zip_buffer, "w", zipfile.ZIP_DEFLATED
+                ) as zf:
+                    zf.write(filepath, os.path.basename(filepath))
                 zip_buffer.seek(0)
                 return send_file(
                     zip_buffer,
@@ -127,8 +132,8 @@ def create_app(file_manager: FileManager) -> Flask:
                     download_name=os.path.basename(filepath)
                 )
         except CaptureNameNotFoundError as e:
-            return jsonify({"error": str(e)}), 404
+            return _json_error(str(e), 404)
         except NoCompletedCapturesError as e:
-            return jsonify({"error": str(e)}), 400
+            return _json_error(str(e), 400)
 
     return app
