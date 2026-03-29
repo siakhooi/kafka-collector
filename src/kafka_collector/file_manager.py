@@ -1,13 +1,14 @@
 import os
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import IO, TypedDict
 
 
 class CompletedCapture(TypedDict):
     name: str
     path: str
+    completed_at: str
 
 
 class FileManager:
@@ -55,6 +56,7 @@ class FileManager:
                 self.completed_files.append({
                     "name": file_name,
                     "path": self.current_filepath,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
                 })
 
             return self._start_new_capture_unlocked()
