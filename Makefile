@@ -68,6 +68,13 @@ test:
 
 all: clean set-version install flake8 build tox-run
 
+docker-build:
+	docker build -f docker/Dockerfile -t siakhooi/kafka-collector:latest .
+docker-run-cli:
+	docker run -p 8080:8080  --network=host  -e KAFKA_TOPICS=topic1,topic2,topic3 siakhooi/kafka-collector:latest
+docker-run-service:
+	docker run -p 8080:8080  --network=host  -e COLLECTOR_MODE=service -e KAFKA_TOPICS=topic1,topic2,topic3 siakhooi/kafka-collector:latest
+
 release:
 	scripts/release.sh
 

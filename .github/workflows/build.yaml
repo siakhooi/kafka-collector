@@ -56,3 +56,11 @@ jobs:
     uses: ./.github/workflows/quality-qltysh.yml
     secrets:
       QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+  build-docker-images:
+    needs: build
+    uses: ./.github/workflows/build-docker-image.yml
+    secrets:
+      PUBLISH_TO_GITHUB_REPO_TOKEN: ${{ secrets.PUBLISH_TO_GITHUB_REPO_TOKEN }}
+      REGISTRY_PASSWORD_DOCKER: ${{ secrets.REGISTRY_PASSWORD_DOCKER }}
+    with:
+      push-images: false
