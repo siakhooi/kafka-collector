@@ -1,4 +1,5 @@
-usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP] [-o OUTPUT]
+usage: kafka-collector [-h] [-v] -t TOPICS [-b BOOTSTRAP_SERVER] [-g GROUP]
+                       [-o OUTPUT]
 
 collect kafka messages from multiple topics
 

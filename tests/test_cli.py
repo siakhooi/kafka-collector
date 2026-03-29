@@ -8,6 +8,7 @@ import pytest
 @pytest.mark.skipif(sys.version_info < (3, 13), reason="Python 3.13+ only")
 @pytest.mark.parametrize("option_help", ["-h", "--help"])
 def test_run_help(monkeypatch, capsys, option_help):
+    monkeypatch.setenv("COLUMNS", "80")
     monkeypatch.setattr(
         "sys.argv",
         ["kafka-collector", option_help],
@@ -28,6 +29,7 @@ def test_run_help(monkeypatch, capsys, option_help):
 @pytest.mark.skipif(sys.version_info >= (3, 13), reason="Python <3.13 only")
 @pytest.mark.parametrize("option_help", ["-h", "--help"])
 def test_run_help312(monkeypatch, capsys, option_help):
+    monkeypatch.setenv("COLUMNS", "80")
     monkeypatch.setattr(
         "sys.argv",
         ["kafka-collector", option_help],
