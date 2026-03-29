@@ -12,6 +12,7 @@ from kafka_collector.constants import (
 from kafka_collector.exceptions import (
     CaptureNameNotFoundError,
     DuplicateCaptureNameError,
+    EmptyCaptureNameError,
     NoCompletedCapturesError,
 )
 from kafka_collector.models import CompletedCapture
@@ -25,8 +26,12 @@ class FileManager:
         self.completed_files: list[CompletedCapture] = []
         self.lock = threading.Lock()
 
+    @staticmethod
+    def _utc_now() -> datetime:
+        return datetime.now(timezone.utc)
+
     def _generate_filepath(self) -> str:
-        timestamp = datetime.now(timezone.utc).strftime(
+        timestamp = self._utc_now().strftime(
             CAPTURE_FILENAME_TIMESTAMP_FORMAT
         )
         filename = (
@@ -38,7 +43,7 @@ class FileManager:
         return {
             "name": file_name,
             "path": path,
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": self._utc_now().isoformat(),
         }
 
     def _generate_short_id(self) -> str:
@@ -50,6 +55,14 @@ class FileManager:
         self.current_file = open(filepath, "a")
         self.current_filepath = filepath
         return filepath
+
+    def _finalize_current_capture_unlocked(self, file_name: str) -> None:
+        # Caller must hold self.lock.
+        if self.current_file and self.current_filepath:
+            self.current_file.close()
+            self.completed_files.append(
+                self._completed_entry(file_name, self.current_filepath)
+            )
 
     def open_new_file(self) -> str:
         with self.lock:
@@ -63,18 +76,20 @@ class FileManager:
 
     def reset(self, name: str | None = None) -> str:
         with self.lock:
-            file_name = name if name else self._generate_short_id()
+            if name is None:
+                file_name = self._generate_short_id()
+            else:
+                stripped = name.strip()
+                if not stripped:
+                    raise EmptyCaptureNameError("name must not be empty")
+                file_name = stripped
 
             if any(f["name"] == file_name for f in self.completed_files):
                 raise DuplicateCaptureNameError(
                     f"name '{file_name}' already exists"
                 )
 
-            if self.current_file and self.current_filepath:
-                self.current_file.close()
-                self.completed_files.append(
-                    self._completed_entry(file_name, self.current_filepath)
-                )
+            self._finalize_current_capture_unlocked(file_name)
 
             return self._start_new_capture_unlocked()
 

@@ -12,3 +12,7 @@ class NoCompletedCapturesError(Exception):
 
 class DuplicateCaptureNameError(Exception):
     pass
+
+
+class EmptyCaptureNameError(Exception):
+    pass
