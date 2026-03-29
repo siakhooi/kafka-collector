@@ -7,7 +7,10 @@ class Mode(Enum):
 
 
 DEFAULT_BOOTSTRAP_SERVER = "localhost:9092"
-DEFAULT_CAPTURE_DIR = "/tmp/kafka-collector"
+# Default only: /tmp is world-writable (symlink/TOCTOU risk in hostile
+# multi-user hosts). Use COLLECTOR_CAPTURE_DIR or -c to a private path in
+# production. Sonar: python:S5443.
+DEFAULT_CAPTURE_DIR = "/tmp/kafka-collector"  # NOSONAR
 DEFAULT_PORT = 8080
 DEFAULT_MODE = Mode.CLI
 
