@@ -38,9 +38,13 @@ class FileManager:
 
     def reset(self, name: str | None = None) -> str:
         with self.lock:
+            file_name = name if name else self._generate_short_id()
+
+            if any(f["name"] == file_name for f in self.completed_files):
+                raise ValueError(f"name '{file_name}' already exists")
+
             if self.current_file and self.current_filepath:
                 self.current_file.close()
-                file_name = name if name else self._generate_short_id()
                 self.completed_files.append({
                     "name": file_name,
                     "path": self.current_filepath
@@ -68,11 +72,14 @@ def create_app(file_manager: FileManager) -> Flask:
     @app.route("/reset", methods=["POST"])
     def reset() -> Any:
         name = request.args.get("name")
-        new_filepath = file_manager.reset(name)
-        return jsonify({
-            "status": "ok",
-            "new_file": new_filepath
-        })
+        try:
+            new_filepath = file_manager.reset(name)
+            return jsonify({
+                "status": "ok",
+                "new_file": new_filepath
+            })
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     @app.route("/files", methods=["GET"])
     def get_files() -> Any:
