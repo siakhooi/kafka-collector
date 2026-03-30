@@ -1,8 +1,8 @@
 help:
 clean:
-	rm -rf dist target coverage \
-	src/kafka_collector/__pycache__ \
-	tests/__pycache__
+	rm -rf dist target coverage .coverage \
+	src/kafka_collector/__pycache__ .pytest_cache docker-compose/captures \
+	tests/__pycache__ .tox *.log output.jsonl download.zip
 run:
 	poetry run kafka-collector
 run-help:
@@ -78,9 +78,5 @@ docker-run-service:
 release:
 	scripts/release.sh
 
-fix-cert:
-	pip install pip-system-certs --trusted-host pypi.org --trusted-host files.pythonhosted.org
-fix-pyenv:
-	 pyenv versions --bare > .python-version
 tox-run:
 	tox run
