@@ -8,6 +8,7 @@ from kafka_collector.args import Options
 from kafka_collector.cli import (
     _create_consumer,
     _format_message,
+    _graceful_shutdown,
     _open_output,
     print_to_stderr_and_exit,
     run,
@@ -183,6 +184,19 @@ class TestOpenOutput:
         assert file_path.read_text() == "existing\nnew content"
 
 
+class TestGracefulShutdown:
+    def test_yields_shutdown_event(self):
+        with _graceful_shutdown() as shutdown_event:
+            assert not shutdown_event.is_set()
+
+    def test_signal_handler_sets_event(self):
+        import signal
+        with _graceful_shutdown() as shutdown_event:
+            assert not shutdown_event.is_set()
+            signal.raise_signal(signal.SIGINT)
+            assert shutdown_event.is_set()
+
+
 class TestCreateConsumer:
     @patch("kafka_collector.cli.KafkaConsumer")
     def test_creates_consumer_with_options(self, mock_consumer_class):
@@ -260,6 +274,40 @@ class TestRunCliMode:
         output = json.loads(content)
         assert output["topic"] == "topic1"
 
+    def test_stops_on_shutdown_event(self, capsys):
+        import signal
+
+        mock_consumer = MagicMock()
+        messages_returned = []
+
+        def message_generator():
+            msg1 = MagicMock()
+            msg1.topic = "topic1"
+            msg1.timestamp = 123
+            msg1.headers = None
+            msg1.value = b"value1"
+            msg1.key = None
+            messages_returned.append(msg1)
+            yield msg1
+            signal.raise_signal(signal.SIGINT)
+            msg2 = MagicMock()
+            msg2.topic = "topic2"
+            msg2.timestamp = 456
+            msg2.headers = None
+            msg2.value = b"value2"
+            msg2.key = None
+            messages_returned.append(msg2)
+            yield msg2
+
+        mock_consumer.__iter__ = MagicMock(return_value=message_generator())
+
+        run_cli_mode(mock_consumer, "-")
+
+        captured = capsys.readouterr()
+        lines = [line for line in captured.out.strip().split('\n') if line]
+        assert len(lines) == 1
+        assert json.loads(lines[0])["topic"] == "topic1"
+
 
 class TestRunServiceMode:
     @patch("kafka_collector.cli.create_app")
@@ -282,6 +330,42 @@ class TestRunServiceMode:
         mock_file_manager.open_new_file.assert_called_once()
         mock_create_app.assert_called_once_with(mock_file_manager)
         mock_app.run.assert_called_once()
+
+    @patch("kafka_collector.cli.create_app")
+    @patch("kafka_collector.cli.FileManager")
+    def test_consumes_messages_in_background(
+        self, mock_fm_class, mock_create_app, tmp_path
+    ):
+        import time
+
+        mock_consumer = MagicMock()
+        message1 = MagicMock()
+        message1.topic = "topic1"
+        message1.timestamp = 123
+        message1.headers = None
+        message1.value = b"value1"
+        message1.key = None
+
+        mock_consumer.__iter__ = MagicMock(return_value=iter([message1]))
+
+        mock_file_manager = MagicMock()
+        mock_fm_class.return_value = mock_file_manager
+
+        mock_app = MagicMock()
+
+        def run_and_wait(*args, **kwargs):
+            time.sleep(0.1)
+
+        mock_app.run = run_and_wait
+        mock_create_app.return_value = mock_app
+
+        capture_dir = tmp_path / "captures"
+
+        run_service_mode(mock_consumer, str(capture_dir), 8080)
+
+        assert mock_file_manager.write.call_count >= 1
+        written = mock_file_manager.write.call_args[0][0]
+        assert "topic1" in written
 
 
 class TestRunIntegration:

@@ -1,4 +1,5 @@
 import json
+import signal
 import sys
 import threading
 from contextlib import contextmanager
@@ -59,10 +60,29 @@ def _open_output(output_file: str) -> Generator[TextIO, None, None]:
             f.close()
 
 
+@contextmanager
+def _graceful_shutdown() -> Generator[threading.Event, None, None]:
+    shutdown_event = threading.Event()
+
+    def signal_handler(signum: int, frame: Any) -> None:
+        shutdown_event.set()
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    yield shutdown_event
+
+
 def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
-    with _open_output(output_file) as out:
-        for message in consumer:
-            print(json.dumps(_format_message(message)), file=out, flush=True)
+    with _graceful_shutdown() as shutdown_event:
+        try:
+            with _open_output(output_file) as out:
+                for message in consumer:
+                    if shutdown_event.is_set():
+                        break
+                    formatted = json.dumps(_format_message(message))
+                    print(formatted, file=out, flush=True)
+        finally:
+            consumer.close()
 
 
 def run_service_mode(
@@ -73,15 +93,25 @@ def run_service_mode(
     file_manager = FileManager(capture_dir)
     file_manager.open_new_file()
 
-    def consume_messages() -> None:
-        for message in consumer:
-            file_manager.write(json.dumps(_format_message(message)) + "\n")
+    with _graceful_shutdown() as shutdown_event:
+        def consume_messages() -> None:
+            for message in consumer:
+                if shutdown_event.is_set():
+                    break
+                file_manager.write(json.dumps(_format_message(message)) + "\n")
 
-    consumer_thread = threading.Thread(target=consume_messages, daemon=True)
-    consumer_thread.start()
+        consumer_thread = threading.Thread(
+            target=consume_messages, daemon=True
+        )
+        consumer_thread.start()
 
-    app = create_app(file_manager)
-    app.run(host=FLASK_HOST, port=port)
+        try:
+            app = create_app(file_manager)
+            app.run(host=FLASK_HOST, port=port)
+        finally:
+            shutdown_event.set()
+            consumer.close()
+            file_manager.close()
 
 
 def run() -> None:
