@@ -39,6 +39,11 @@ options:
 - `COLLECTOR_MODE` - run mode (cli or service)
 - `COLLECTOR_SERVICE_PORT` - service port (must be integer)
 
+## Documentation
+
+- [CLI Mode](docs/cli-mode.md) - Default mode for streaming messages to stdout or file
+- [Service Mode](docs/service-mode.md) - HTTP service mode with REST API for capture management
+
 ## Deployment Examples
 
 - [Docker Compose](docker-compose/) - Run with Docker Compose
