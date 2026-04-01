@@ -4,7 +4,7 @@ import sys
 import uuid
 from dataclasses import dataclass, field
 from importlib.metadata import version
-from typing import List, Optional, TypeVar
+from typing import Any, Callable, List, Optional, TypeVar
 
 from kafka_collector.constants import (
     DEFAULT_BOOTSTRAP_SERVER,
@@ -26,33 +26,40 @@ from kafka_collector.exceptions import ArgumentValidationError
 
 T = TypeVar('T')
 
+__version__: str = version("kafka-collector")
 
-def _resolve_value(
-    arg_value: Optional[T],
+
+def _resolve(
+    arg_value: Any,
     env_value: Optional[str],
-    default: T
+    default: T,
+    converter: Optional[Callable[[str], T]] = None,
+    validator: Optional[Callable[[T], T]] = None,
+    required: bool = False,
+    error_msg: Optional[str] = None
 ) -> T:
     if arg_value is not None:
-        return arg_value
-    if env_value:
-        return env_value  # type: ignore
-    return default
+        if converter and isinstance(arg_value, str):
+            result = converter(arg_value)
+        else:
+            result = arg_value
+    elif env_value:
+        result = converter(env_value) if converter else env_value
+    elif required:
+        raise ArgumentValidationError(
+            error_msg or "Required value not provided"
+        )
+    else:
+        result = default
+    return validator(result) if validator else result
 
 
 def _warn_ignored(option: str, mode: str) -> None:
     print(f"Warning: {option} will be ignored in {mode} mode", file=sys.stderr)
 
 
-def _resolve_topics(
-    arg_topics: Optional[str],
-    env_topics: Optional[str]
-) -> List[str]:
-    topics_str = arg_topics if arg_topics is not None else env_topics
-    if not topics_str:
-        raise ArgumentValidationError(
-            f"--topics or {ENV_TOPICS} must be provided"
-        )
-    topics = [t.strip() for t in topics_str.split(",") if t.strip()]
+def _parse_topics(value: str) -> List[str]:
+    topics = [t.strip() for t in value.split(",") if t.strip()]
     if not topics:
         raise ArgumentValidationError(
             "--topics must contain at least one topic"
@@ -60,51 +67,23 @@ def _resolve_topics(
     return topics
 
 
-def _resolve_mode(
-    arg_mode: Optional[str],
-    env_mode: Optional[str]
-) -> Mode:
-    mode_str = arg_mode if arg_mode is not None else env_mode
-    if mode_str is not None:
-        try:
-            return Mode(mode_str)
-        except ValueError:
-            valid_modes = ", ".join([m.value for m in Mode])
-            raise ArgumentValidationError(
-                f"Invalid mode '{mode_str}'. Must be one of: {valid_modes}"
-            )
-    return DEFAULT_MODE
+def _parse_mode(value: str) -> Mode:
+    try:
+        return Mode(value)
+    except ValueError:
+        valid_modes = ", ".join([m.value for m in Mode])
+        raise ArgumentValidationError(
+            f"Invalid mode '{value}'. Must be one of: {valid_modes}"
+        )
 
 
-def _resolve_port(
-    arg_port: Optional[int],
-    env_port: Optional[str]
-) -> int:
-    if arg_port is not None:
-        return arg_port
-    if env_port:
-        try:
-            return int(env_port)
-        except ValueError:
-            raise ArgumentValidationError(
-                f"Invalid {ENV_SERVICE_PORT} '{env_port}'. Must be integer"
-            )
-    return DEFAULT_PORT
-
-
-def _resolve_log_level(
-    debug: bool,
-    arg_log_level: Optional[str],
-    env_log_level: Optional[str],
-    default: str
-) -> str:
-    if debug:
-        return DEBUG_LOG_LEVEL
-    if arg_log_level is not None:
-        return arg_log_level.upper()
-    if env_log_level:
-        return env_log_level.upper()
-    return default.upper()
+def _parse_port(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        raise ArgumentValidationError(
+            f"Invalid {ENV_SERVICE_PORT} '{value}'. Must be integer"
+        )
 
 
 @dataclass
@@ -120,8 +99,6 @@ class Options:
 
 
 def _create_parser() -> argparse.ArgumentParser:
-    __version__: str = version("kafka-collector")
-
     parser = argparse.ArgumentParser(
         description="collect kafka messages from multiple topics"
     )
@@ -172,35 +149,52 @@ def _create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _get_env_vars() -> dict:
+    return {
+        'topics': os.environ.get(ENV_TOPICS),
+        'bootstrap_server': os.environ.get(ENV_BOOTSTRAP_SERVER),
+        'group': os.environ.get(ENV_GROUP),
+        'mode': os.environ.get(ENV_MODE),
+        'capture_dir': os.environ.get(ENV_CAPTURE_DIR),
+        'port': os.environ.get(ENV_SERVICE_PORT),
+        'log_level': os.environ.get(ENV_LOG_LEVEL),
+    }
+
+
 def _resolve_options(args: argparse.Namespace) -> Options:
-    topics = _resolve_topics(
-        args.topics, os.environ.get(ENV_TOPICS)
+    env = _get_env_vars()
+
+    topics = _resolve(
+        args.topics, env['topics'], [],
+        converter=_parse_topics,
+        required=True,
+        error_msg=f"--topics or {ENV_TOPICS} must be provided"
     )
-    bootstrap_server = _resolve_value(
+    bootstrap_server = _resolve(
         args.bootstrap_server,
-        os.environ.get(ENV_BOOTSTRAP_SERVER),
+        env['bootstrap_server'],
         DEFAULT_BOOTSTRAP_SERVER
     )
-    group_id = _resolve_value(
-        args.group, os.environ.get(ENV_GROUP), str(uuid.uuid4())
+    group_id = _resolve(
+        args.group, env['group'], str(uuid.uuid4())
     )
-    mode = _resolve_mode(
-        args.mode, os.environ.get(ENV_MODE)
+    mode = _resolve(
+        args.mode, env['mode'], DEFAULT_MODE,
+        converter=_parse_mode
     )
-    output_file = args.output if args.output is not None else "-"
-    capture_dir = _resolve_value(
-        args.capture_dir,
-        os.environ.get(ENV_CAPTURE_DIR),
-        DEFAULT_CAPTURE_DIR
+    output_file = _resolve(args.output, None, "-")
+    capture_dir = _resolve(
+        args.capture_dir, env['capture_dir'], DEFAULT_CAPTURE_DIR
     )
-    port = _resolve_port(
-        args.port, os.environ.get(ENV_SERVICE_PORT)
+    port = _resolve(
+        args.port, env['port'], DEFAULT_PORT,
+        converter=_parse_port
     )
-    log_level = _resolve_log_level(
-        args.debug,
-        args.log_level,
-        os.environ.get(ENV_LOG_LEVEL),
-        DEFAULT_LOG_LEVEL
+    log_level = _resolve(
+        DEBUG_LOG_LEVEL if args.debug else args.log_level,
+        env['log_level'],
+        DEFAULT_LOG_LEVEL,
+        validator=lambda x: x.upper()
     )
 
     return Options(

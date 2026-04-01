@@ -5,11 +5,11 @@ import pytest
 
 from kafka_collector.args import (
     Options,
-    _resolve_mode,
+    _parse_mode,
+    _parse_port,
+    _parse_topics,
+    _resolve,
     _resolve_options,
-    _resolve_port,
-    _resolve_topics,
-    _resolve_value,
     _validate_mode_options,
     _warn_ignored,
     parse_args,
@@ -30,22 +30,36 @@ from kafka_collector.constants import (
 from kafka_collector.exceptions import ArgumentValidationError
 
 
-class TestResolveValue:
+class TestResolve:
     def test_arg_value_takes_precedence(self):
-        result = _resolve_value("arg", "env", "default")
+        result = _resolve("arg", "env", "default")
         assert result == "arg"
 
     def test_env_value_used_when_arg_is_none(self):
-        result = _resolve_value(None, "env", "default")
+        result = _resolve(None, "env", "default")
         assert result == "env"
 
     def test_default_used_when_both_none(self):
-        result = _resolve_value(None, None, "default")
+        result = _resolve(None, None, "default")
         assert result == "default"
 
     def test_default_used_when_env_is_empty(self):
-        result = _resolve_value(None, "", "default")
+        result = _resolve(None, "", "default")
         assert result == "default"
+
+    def test_converter_applied_to_env_value(self):
+        result = _resolve(None, "42", 0, converter=int)
+        assert result == 42
+
+    def test_validator_applied_to_result(self):
+        result = _resolve("hello", None, "", validator=str.upper)
+        assert result == "HELLO"
+
+    def test_required_raises_when_no_value(self):
+        with pytest.raises(ArgumentValidationError):
+            _resolve(
+                None, None, None, required=True, error_msg="Value required"
+            )
 
 
 class TestWarnIgnored:
@@ -57,94 +71,51 @@ class TestWarnIgnored:
         )
 
 
-class TestResolveTopics:
-    def test_arg_topics_takes_precedence(self):
-        result = _resolve_topics("topic1,topic2", "env_topic")
-        assert result == ["topic1", "topic2"]
-
-    def test_env_topics_used_when_arg_is_none(self):
-        result = _resolve_topics(None, "topic1,topic2")
+class TestParseTopics:
+    def test_parses_comma_separated_topics(self):
+        result = _parse_topics("topic1,topic2")
         assert result == ["topic1", "topic2"]
 
     def test_strips_whitespace(self):
-        result = _resolve_topics(" topic1 , topic2 ", None)
+        result = _parse_topics(" topic1 , topic2 ")
         assert result == ["topic1", "topic2"]
 
     def test_filters_empty_topics(self):
-        result = _resolve_topics("topic1,,topic2,", None)
+        result = _parse_topics("topic1,,topic2,")
         assert result == ["topic1", "topic2"]
-
-    def test_raises_when_no_topics_provided(self):
-        with pytest.raises(ArgumentValidationError) as exc_info:
-            _resolve_topics(None, None)
-        assert f"--topics or {ENV_TOPICS} must be provided" in str(
-            exc_info.value
-        )
-
-    def test_raises_when_topics_string_is_empty(self):
-        with pytest.raises(ArgumentValidationError) as exc_info:
-            _resolve_topics("", None)
-        assert f"--topics or {ENV_TOPICS} must be provided" in str(
-            exc_info.value
-        )
 
     def test_raises_when_all_topics_are_whitespace(self):
         with pytest.raises(ArgumentValidationError) as exc_info:
-            _resolve_topics(" , , ", None)
+            _parse_topics(" , , ")
         assert "--topics must contain at least one topic" in str(
             exc_info.value
         )
 
 
-class TestResolveMode:
-    def test_arg_mode_takes_precedence(self):
-        result = _resolve_mode("service", "cli")
+class TestParseMode:
+    def test_parses_service_mode(self):
+        result = _parse_mode("service")
         assert result == Mode.SERVICE
 
-    def test_env_mode_used_when_arg_is_none(self):
-        result = _resolve_mode(None, "service")
-        assert result == Mode.SERVICE
-
-    def test_returns_default_when_both_none(self):
-        result = _resolve_mode(None, None)
-        assert result == DEFAULT_MODE
-
-    def test_cli_mode(self):
-        result = _resolve_mode("cli", None)
+    def test_parses_cli_mode(self):
+        result = _parse_mode("cli")
         assert result == Mode.CLI
 
     def test_raises_on_invalid_mode(self):
         with pytest.raises(ArgumentValidationError) as exc_info:
-            _resolve_mode("invalid", None)
+            _parse_mode("invalid")
         assert "Invalid mode 'invalid'" in str(exc_info.value)
         assert "cli, service" in str(exc_info.value)
 
-    def test_raises_on_invalid_env_mode(self):
-        with pytest.raises(ArgumentValidationError) as exc_info:
-            _resolve_mode(None, "invalid")
-        assert "Invalid mode 'invalid'" in str(exc_info.value)
 
-
-class TestResolvePort:
-    def test_arg_port_takes_precedence(self):
-        result = _resolve_port(9090, "8080")
+class TestParsePort:
+    def test_parses_valid_port(self):
+        result = _parse_port("9090")
         assert result == 9090
 
-    def test_env_port_used_when_arg_is_none(self):
-        result = _resolve_port(None, "9090")
-        assert result == 9090
-
-    def test_returns_default_when_both_none(self):
-        result = _resolve_port(None, None)
-        assert result == DEFAULT_PORT
-
-    def test_returns_default_when_env_is_empty(self):
-        result = _resolve_port(None, "")
-        assert result == DEFAULT_PORT
-
-    def test_raises_on_invalid_env_port(self):
+    def test_raises_on_invalid_port(self):
         with pytest.raises(ArgumentValidationError) as exc_info:
-            _resolve_port(None, "not_a_number")
+            _parse_port("not_a_number")
         assert f"Invalid {ENV_SERVICE_PORT}" in str(exc_info.value)
         assert "Must be integer" in str(exc_info.value)
 
