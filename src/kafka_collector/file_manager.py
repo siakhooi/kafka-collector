@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import TextIO
 
+from kafka_collector.logging_config import get_logger
 from kafka_collector.constants import (
     CAPTURE_FILENAME_EXTENSION,
     CAPTURE_FILENAME_PREFIX,
@@ -16,6 +17,8 @@ from kafka_collector.exceptions import (
     NoCompletedCapturesError,
 )
 from kafka_collector.models import CompletedCapture
+
+logger = get_logger(__name__)
 
 
 class FileManager:
@@ -54,6 +57,7 @@ class FileManager:
         filepath = self._generate_filepath()
         self.current_file = open(filepath, "a")
         self.current_filepath = filepath
+        logger.debug("Started new capture file: %s", filepath)
         return filepath
 
     def _finalize_current_capture_unlocked(self, file_name: str) -> None:
@@ -62,6 +66,10 @@ class FileManager:
             self.current_file.close()
             self.completed_files.append(
                 self._completed_entry(file_name, self.current_filepath)
+            )
+            logger.info(
+                "Finalized capture '%s' at %s",
+                file_name, self.current_filepath
             )
 
     def open_new_file(self) -> str:
@@ -75,6 +83,7 @@ class FileManager:
                 self.current_file.flush()
 
     def reset(self, name: str | None = None) -> str:
+        logger.debug("Reset requested with name=%s", name)
         with self.lock:
             if name is None:
                 file_name = self._generate_short_id()
@@ -115,5 +124,6 @@ class FileManager:
         with self.lock:
             if self.current_file:
                 self.current_file.close()
+                logger.debug("Closed current capture file")
             self.current_file = None
             self.current_filepath = None

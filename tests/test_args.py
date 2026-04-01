@@ -166,6 +166,8 @@ class TestResolveOptions:
             output="/tmp/out.json",
             capture_dir="/tmp/captures",
             port=9090,
+            log_level="info",
+            debug=False,
         )
 
         result = _resolve_options(args)
@@ -194,6 +196,8 @@ class TestResolveOptions:
             output=None,
             capture_dir=None,
             port=None,
+            log_level=None,
+            debug=False,
         )
 
         result = _resolve_options(args)
@@ -222,6 +226,8 @@ class TestResolveOptions:
             output=None,
             capture_dir=None,
             port=None,
+            log_level=None,
+            debug=False,
         )
 
         result = _resolve_options(args)

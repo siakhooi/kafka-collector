@@ -67,7 +67,10 @@ test:
 	 --cov-report lcov:coverage/coverage.info
 
 all: clean set-version install flake8 build tox-run
-
+one: clean set-version install flake8 build
+	tox run -e py314
+312: clean set-version install flake8 build
+	tox run -e py312
 docker-build:
 	docker build -f docker/Dockerfile -t siakhooi/kafka-collector:latest .
 docker-run-cli:

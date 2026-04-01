@@ -8,6 +8,7 @@ from typing import Any, Generator, TextIO
 from kafka import KafkaConsumer
 
 from kafka_collector.args import Options, parse_args
+from kafka_collector.logging_config import get_logger, setup_logging
 from kafka_collector.constants import (
     FLASK_HOST,
     KAFKA_AUTO_OFFSET_RESET,
@@ -18,6 +19,8 @@ from kafka_collector.constants import (
 from kafka_collector.exceptions import ArgumentValidationError
 from kafka_collector.file_manager import FileManager
 from kafka_collector.service import create_app
+
+logger = get_logger(__name__)
 
 
 def print_to_stderr_and_exit(e: Exception, exit_code: int) -> None:
@@ -36,6 +39,12 @@ def _format_message(message: Any) -> dict:
 
 
 def _create_consumer(options: Options) -> KafkaConsumer:
+    logger.info(
+        "Connecting to Kafka at %s with group_id=%s",
+        options.bootstrap_server,
+        options.group_id,
+    )
+    logger.debug("Subscribing to topics: %s", options.topics)
     consumer = KafkaConsumer(
         *options.topics,
         bootstrap_servers=options.bootstrap_server,
@@ -45,6 +54,7 @@ def _create_consumer(options: Options) -> KafkaConsumer:
     )
     while not consumer.assignment():
         consumer.poll(timeout_ms=KAFKA_POLL_TIMEOUT_MS)
+    logger.info("Consumer connected and assigned partitions")
     return consumer
 
 
@@ -73,15 +83,22 @@ def _graceful_shutdown() -> Generator[threading.Event, None, None]:
 
 
 def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
+    logger.info("Starting CLI mode, output=%s", output_file)
     with _graceful_shutdown() as shutdown_event:
         try:
             with _open_output(output_file) as out:
+                msg_count = 0
                 for message in consumer:
                     if shutdown_event.is_set():
+                        logger.info("Shutdown signal received")
                         break
                     formatted = json.dumps(_format_message(message))
                     print(formatted, file=out, flush=True)
+                    msg_count += 1
+                    if msg_count % 1000 == 0:
+                        logger.debug("Processed %d messages", msg_count)
         finally:
+            logger.info("Closing consumer")
             consumer.close()
 
 
@@ -90,25 +107,36 @@ def run_service_mode(
     capture_dir: str,
     port: int
 ) -> None:
+    logger.info(
+        "Starting service mode, capture_dir=%s, port=%d", capture_dir, port
+    )
     file_manager = FileManager(capture_dir)
     file_manager.open_new_file()
 
     with _graceful_shutdown() as shutdown_event:
         def consume_messages() -> None:
+            msg_count = 0
             for message in consumer:
                 if shutdown_event.is_set():
+                    logger.info("Shutdown signal received in consumer thread")
                     break
                 file_manager.write(json.dumps(_format_message(message)) + "\n")
+                msg_count += 1
+                if msg_count % 1000 == 0:
+                    logger.debug("Captured %d messages", msg_count)
 
         consumer_thread = threading.Thread(
             target=consume_messages, daemon=True
         )
         consumer_thread.start()
+        logger.debug("Consumer thread started")
 
         try:
             app = create_app(file_manager)
+            logger.info("Starting Flask server on %s:%d", FLASK_HOST, port)
             app.run(host=FLASK_HOST, port=port)
         finally:
+            logger.info("Shutting down service")
             shutdown_event.set()
             consumer.close()
             file_manager.close()
@@ -120,6 +148,9 @@ def run() -> None:
     except ArgumentValidationError as e:
         print_to_stderr_and_exit(e, 1)
 
+    setup_logging(log_level=options.log_level)
+    logger.debug("Options: %s", options)
+
     try:
         consumer = _create_consumer(options)
 
@@ -129,4 +160,5 @@ def run() -> None:
             run_cli_mode(consumer, options.output_file)
 
     except Exception as e:
+        logger.exception("Fatal error")
         print_to_stderr_and_exit(e, 1)

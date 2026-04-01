@@ -11,6 +11,9 @@ from kafka_collector.constants import (
     DEFAULT_CAPTURE_DIR,
     DEFAULT_MODE,
     DEFAULT_PORT,
+    DEBUG_LOG_LEVEL,
+    DEFAULT_LOG_LEVEL,
+    ENV_LOG_LEVEL,
     ENV_BOOTSTRAP_SERVER,
     ENV_CAPTURE_DIR,
     ENV_GROUP,
@@ -89,6 +92,21 @@ def _resolve_port(
     return DEFAULT_PORT
 
 
+def _resolve_log_level(
+    debug: bool,
+    arg_log_level: Optional[str],
+    env_log_level: Optional[str],
+    default: str
+) -> str:
+    if debug:
+        return DEBUG_LOG_LEVEL
+    if arg_log_level is not None:
+        return arg_log_level.upper()
+    if env_log_level:
+        return env_log_level.upper()
+    return default.upper()
+
+
 @dataclass
 class Options:
     topics: List[str] = field(default_factory=list)
@@ -98,6 +116,7 @@ class Options:
     capture_dir: str = DEFAULT_CAPTURE_DIR
     mode: Mode = DEFAULT_MODE
     port: int = DEFAULT_PORT
+    log_level: Optional[str] = None
 
 
 def _create_parser() -> argparse.ArgumentParser:
@@ -140,6 +159,15 @@ def _create_parser() -> argparse.ArgumentParser:
         "-p", "--port", type=int, default=None,
         help="service port for service mode (default: 8080)",
     )
+    parser.add_argument(
+        "--log-level", default=None,
+        choices=["debug", "info", "warning", "error", "critical"],
+        help="logging level (default: info)",
+    )
+    parser.add_argument(
+        "--debug", action="store_true",
+        help="enable debug logging (shortcut for --log-level debug)",
+    )
 
     return parser
 
@@ -168,6 +196,12 @@ def _resolve_options(args: argparse.Namespace) -> Options:
     port = _resolve_port(
         args.port, os.environ.get(ENV_SERVICE_PORT)
     )
+    log_level = _resolve_log_level(
+        args.debug,
+        args.log_level,
+        os.environ.get(ENV_LOG_LEVEL),
+        DEFAULT_LOG_LEVEL
+    )
 
     return Options(
         topics=topics,
@@ -177,6 +211,7 @@ def _resolve_options(args: argparse.Namespace) -> Options:
         capture_dir=capture_dir,
         mode=mode,
         port=port,
+        log_level=log_level
     )
 
 
