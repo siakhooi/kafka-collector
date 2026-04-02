@@ -99,6 +99,18 @@ def _consume_messages(
             logger.debug("Processed %d messages", msg_count)
 
 
+def _consume_messages_to_file(
+    consumer: KafkaConsumer,
+    shutdown_event: threading.Event,
+    file_manager: FileManager,
+) -> None:
+    """Consume messages and write to file manager."""
+    def process_message(message: Any) -> None:
+        file_manager.write(json.dumps(_format_message(message)) + "\n")
+
+    _consume_messages(consumer, shutdown_event, process_message)
+
+
 def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
     logger.info("Starting CLI mode, output=%s", output_file)
     with _graceful_shutdown() as shutdown_event:
@@ -126,14 +138,10 @@ def run_service_mode(
     file_manager.open_new_file()
 
     with _graceful_shutdown() as shutdown_event:
-        def process_message(message: Any) -> None:
-            file_manager.write(json.dumps(_format_message(message)) + "\n")
-
-        def consume_messages() -> None:
-            _consume_messages(consumer, shutdown_event, process_message)
-
         consumer_thread = threading.Thread(
-            target=consume_messages, daemon=True
+            target=_consume_messages_to_file,
+            args=(consumer, shutdown_event, file_manager),
+            daemon=True
         )
         consumer_thread.start()
         logger.debug("Consumer thread started")
