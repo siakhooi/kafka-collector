@@ -127,3 +127,12 @@ class FileManager:
                 logger.debug("Closed current capture file")
             self.current_file = None
             self.current_filepath = None
+
+    def __enter__(self) -> "FileManager":
+        self.open_new_file()
+        return self
+
+    def __exit__(
+        self, exc_type: object, exc_val: object, exc_tb: object
+    ) -> None:
+        self.close()

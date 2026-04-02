@@ -317,6 +317,8 @@ class TestRunServiceMode:
         mock_consumer.__iter__ = MagicMock(return_value=iter([]))
 
         mock_file_manager = MagicMock()
+        mock_file_manager.__enter__ = MagicMock(return_value=mock_file_manager)
+        mock_file_manager.__exit__ = MagicMock(return_value=None)
         mock_fm_class.return_value = mock_file_manager
 
         mock_app = MagicMock()
@@ -327,7 +329,7 @@ class TestRunServiceMode:
         run_service_mode(mock_consumer, str(capture_dir), 8080)
 
         mock_fm_class.assert_called_once_with(str(capture_dir))
-        mock_file_manager.open_new_file.assert_called_once()
+        mock_file_manager.__enter__.assert_called_once()
         mock_create_app.assert_called_once_with(mock_file_manager)
         mock_app.run.assert_called_once()
 
@@ -349,6 +351,8 @@ class TestRunServiceMode:
         mock_consumer.__iter__ = MagicMock(return_value=iter([message1]))
 
         mock_file_manager = MagicMock()
+        mock_file_manager.__enter__ = MagicMock(return_value=mock_file_manager)
+        mock_file_manager.__exit__ = MagicMock(return_value=None)
         mock_fm_class.return_value = mock_file_manager
 
         mock_app = MagicMock()

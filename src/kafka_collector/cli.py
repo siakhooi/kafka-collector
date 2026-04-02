@@ -134,27 +134,25 @@ def run_service_mode(
     logger.info(
         "Starting service mode, capture_dir=%s, port=%d", capture_dir, port
     )
-    file_manager = FileManager(capture_dir)
-    file_manager.open_new_file()
 
-    with _graceful_shutdown() as shutdown_event:
-        consumer_thread = threading.Thread(
-            target=_consume_messages_to_file,
-            args=(consumer, shutdown_event, file_manager),
-            daemon=True
-        )
-        consumer_thread.start()
-        logger.debug("Consumer thread started")
+    with FileManager(capture_dir) as file_manager:
+        with _graceful_shutdown() as shutdown_event:
+            consumer_thread = threading.Thread(
+                target=_consume_messages_to_file,
+                args=(consumer, shutdown_event, file_manager),
+                daemon=True
+            )
+            consumer_thread.start()
+            logger.debug("Consumer thread started")
 
-        try:
-            app = create_app(file_manager)
-            logger.info("Starting Flask server on %s:%d", FLASK_HOST, port)
-            app.run(host=FLASK_HOST, port=port)
-        finally:
-            logger.info("Shutting down service")
-            shutdown_event.set()
-            consumer.close()
-            file_manager.close()
+            try:
+                app = create_app(file_manager)
+                logger.info("Starting Flask server on %s:%d", FLASK_HOST, port)
+                app.run(host=FLASK_HOST, port=port)
+            finally:
+                logger.info("Shutting down service")
+                shutdown_event.set()
+                consumer.close()
 
 
 def run() -> None:
