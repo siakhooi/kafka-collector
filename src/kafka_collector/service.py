@@ -23,6 +23,8 @@ from kafka_collector.service_helpers import (
 
 logger = get_logger(__name__)
 
+DOWNLOAD_FAILED_MSG = "Download failed: %s"
+
 
 def create_app(file_manager: FileManager) -> Flask:
     # Programmatic operator/automation API: no cookie-based session auth;
@@ -70,20 +72,20 @@ def create_app(file_manager: FileManager) -> Flask:
         logger.debug("GET /download name=%s", request.args.get("name"))
         err, name = parse_name_args(request.args.getlist("name"))
         if err:
-            logger.warning("Download failed: %s", err)
+            logger.warning(DOWNLOAD_FAILED_MSG, err)
             return json_error(err, 400)
         err_type, file_type = parse_type_args(request.args.getlist("type"))
         if err_type:
-            logger.warning("Download failed: %s", err_type)
+            logger.warning(DOWNLOAD_FAILED_MSG, err_type)
             return json_error(err_type, 400)
 
         try:
             return _handle_download(name, file_type)
         except CaptureNameNotFoundError as e:
-            logger.warning("Download failed: %s", e)
+            logger.warning(DOWNLOAD_FAILED_MSG, e)
             return json_error(str(e), 404)
         except NoCompletedCapturesError as e:
-            logger.warning("Download failed: %s", e)
+            logger.warning(DOWNLOAD_FAILED_MSG, e)
             return json_error(str(e), 400)
 
     return app
