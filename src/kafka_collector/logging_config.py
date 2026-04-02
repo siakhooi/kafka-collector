@@ -6,6 +6,11 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 
+LOGGERS_TO_SUPPRESS = {
+    "kafka": logging.WARNING,
+    "werkzeug": logging.WARNING,
+}
+
 
 def setup_logging(
     log_level: Optional[str] = None,
@@ -28,8 +33,8 @@ def setup_logging(
         handlers=[logging.StreamHandler(sys.stderr)],
     )
 
-    logging.getLogger("kafka").setLevel(logging.WARNING)
-    logging.getLogger("werkzeug").setLevel(logging.WARNING)
+    for logger_name, suppress_level in LOGGERS_TO_SUPPRESS.items():
+        logging.getLogger(logger_name).setLevel(suppress_level)
 
 
 def get_logger(name: str) -> logging.Logger:
