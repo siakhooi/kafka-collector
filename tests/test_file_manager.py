@@ -168,3 +168,14 @@ def test_completed_at_is_parseable_utc_iso(fm_open):
     raw = fm_open.get_files()[0]["completed_at"]
     parsed = datetime.fromisoformat(raw)
     assert parsed.tzinfo is not None
+
+
+def test_context_manager_opens_and_closes(capture_dir):
+    """Test that FileManager works as a context manager."""
+    with FileManager(str(capture_dir)) as fm:
+        assert fm.current_file is not None
+        assert fm.current_filepath is not None
+
+    # After exiting context, file should be closed
+    assert fm.current_file is None
+    assert fm.current_filepath is None
