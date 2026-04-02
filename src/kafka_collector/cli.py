@@ -3,7 +3,7 @@ import signal
 import sys
 import threading
 from contextlib import contextmanager
-from typing import Any, Generator, TextIO
+from typing import Any, Callable, Generator, TextIO
 
 from kafka import KafkaConsumer
 
@@ -82,21 +82,33 @@ def _graceful_shutdown() -> Generator[threading.Event, None, None]:
     yield shutdown_event
 
 
+def _consume_messages(
+    consumer: KafkaConsumer,
+    shutdown_event: threading.Event,
+    process_message: Callable[[Any], None],
+) -> None:
+    """Generic message consumption loop with shutdown handling."""
+    msg_count = 0
+    for message in consumer:
+        if shutdown_event.is_set():
+            logger.info("Shutdown signal received")
+            break
+        process_message(message)
+        msg_count += 1
+        if msg_count % 1000 == 0:
+            logger.debug("Processed %d messages", msg_count)
+
+
 def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
     logger.info("Starting CLI mode, output=%s", output_file)
     with _graceful_shutdown() as shutdown_event:
         try:
             with _open_output(output_file) as out:
-                msg_count = 0
-                for message in consumer:
-                    if shutdown_event.is_set():
-                        logger.info("Shutdown signal received")
-                        break
+                def process_message(message: Any) -> None:
                     formatted = json.dumps(_format_message(message))
                     print(formatted, file=out, flush=True)
-                    msg_count += 1
-                    if msg_count % 1000 == 0:
-                        logger.debug("Processed %d messages", msg_count)
+
+                _consume_messages(consumer, shutdown_event, process_message)
         finally:
             logger.info("Closing consumer")
             consumer.close()
@@ -114,16 +126,11 @@ def run_service_mode(
     file_manager.open_new_file()
 
     with _graceful_shutdown() as shutdown_event:
+        def process_message(message: Any) -> None:
+            file_manager.write(json.dumps(_format_message(message)) + "\n")
+
         def consume_messages() -> None:
-            msg_count = 0
-            for message in consumer:
-                if shutdown_event.is_set():
-                    logger.info("Shutdown signal received in consumer thread")
-                    break
-                file_manager.write(json.dumps(_format_message(message)) + "\n")
-                msg_count += 1
-                if msg_count % 1000 == 0:
-                    logger.debug("Captured %d messages", msg_count)
+            _consume_messages(consumer, shutdown_event, process_message)
 
         consumer_thread = threading.Thread(
             target=consume_messages, daemon=True
