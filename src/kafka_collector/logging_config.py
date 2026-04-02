@@ -12,10 +12,8 @@ LOGGERS_TO_SUPPRESS = {
 }
 
 
-def setup_logging(
-    log_level: Optional[str] = None,
-) -> None:
-
+def _validate_log_level(log_level: Optional[str]) -> str:
+    """Validate log level and return valid level or default."""
     if log_level not in VALID_LOG_LEVELS:
         valid = ", ".join(sorted(VALID_LOG_LEVELS))
         print(
@@ -23,7 +21,16 @@ def setup_logging(
             f"Valid levels: {valid}. Using INFO.",
             file=sys.stderr,
         )
-        log_level = "INFO"
+        return "INFO"
+    return log_level
+
+
+def setup_logging(
+    log_level: Optional[str] = None,
+) -> None:
+
+    log_level = log_level or "INFO"
+    log_level = _validate_log_level(log_level)
 
     level = getattr(logging, log_level)
 
