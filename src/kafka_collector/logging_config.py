@@ -1,6 +1,5 @@
 import logging
 import sys
-from typing import Optional
 
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
@@ -12,7 +11,7 @@ LOGGERS_TO_SUPPRESS = {
 }
 
 
-def _validate_log_level(log_level: Optional[str]) -> str:
+def _validate_log_level(log_level: str | None) -> str:
     """Validate log level and return valid level or default."""
     if log_level not in VALID_LOG_LEVELS:
         valid = ", ".join(sorted(VALID_LOG_LEVELS))
@@ -26,7 +25,7 @@ def _validate_log_level(log_level: Optional[str]) -> str:
 
 
 def setup_logging(
-    log_level: Optional[str] = None,
+    log_level: str | None = None,
 ) -> None:
 
     log_level = log_level or "INFO"
