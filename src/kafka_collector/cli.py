@@ -105,6 +105,7 @@ def _consume_messages_to_file(
     file_manager: FileManager,
 ) -> None:
     """Consume messages and write to file manager."""
+
     def process_message(message: Any) -> None:
         file_manager.write(json.dumps(_format_message(message)) + "\n")
 
@@ -116,6 +117,7 @@ def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
     with _graceful_shutdown() as shutdown_event:
         try:
             with _open_output(output_file) as out:
+
                 def process_message(message: Any) -> None:
                     formatted = json.dumps(_format_message(message))
                     print(formatted, file=out, flush=True)
@@ -127,9 +129,7 @@ def run_cli_mode(consumer: KafkaConsumer, output_file: str) -> None:
 
 
 def run_service_mode(
-    consumer: KafkaConsumer,
-    capture_dir: str,
-    port: int
+    consumer: KafkaConsumer, capture_dir: str, port: int
 ) -> None:
     logger.info(
         "Starting service mode, capture_dir=%s, port=%d", capture_dir, port
@@ -140,7 +140,7 @@ def run_service_mode(
             consumer_thread = threading.Thread(
                 target=_consume_messages_to_file,
                 args=(consumer, shutdown_event, file_manager),
-                daemon=True
+                daemon=True,
             )
             consumer_thread.start()
             logger.debug("Consumer thread started")
@@ -175,3 +175,7 @@ def run() -> None:
     except Exception as e:
         logger.exception("Fatal error")
         print_to_stderr_and_exit(e, 1)
+
+
+if __name__ == "__main__":
+    run()

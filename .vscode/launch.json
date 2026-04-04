@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "kafka-collector: topic1,2,3",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "kafka_collector.cli",
+            "args": [
+                "-t",
+                "topic1,topic2,topic3"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

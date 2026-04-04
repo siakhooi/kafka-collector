@@ -26,5 +26,6 @@
 	],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
-	}
+	},
+	"postStartCommand": "sudo chmod 666 /var/run/docker.sock || true"
 }
