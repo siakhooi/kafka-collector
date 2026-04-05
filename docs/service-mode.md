@@ -18,6 +18,8 @@ kafka-collector -m service -t topic1,topic2 -b localhost:9092 -p 8080
 | `-c, --capture-dir` | `COLLECTOR_CAPTURE_DIR` | `/tmp/kafka-collector` | Directory to store capture files |
 | `-p, --port` | `COLLECTOR_SERVICE_PORT` | `8080` | HTTP service port |
 | `-m, --mode` | `COLLECTOR_MODE` | `cli` | Run mode (set to `service`) |
+| `--log-level` | `LOG_LEVEL` | `info` | Logging level: debug, info, warning, error, critical |
+| `--debug` | - | - | Shortcut for `--log-level debug` |
 
 **Note:** The `-o/--output` option is ignored in service mode.
 
@@ -155,6 +157,7 @@ export KAFKA_BOOTSTRAP_SERVER=kafka:9092
 export COLLECTOR_MODE=service
 export COLLECTOR_CAPTURE_DIR=/data/captures
 export COLLECTOR_SERVICE_PORT=8080
+export LOG_LEVEL=warning
 
 kafka-collector
 ```
@@ -187,3 +190,4 @@ curl "http://localhost:8080/download?name=morning-batch" -o morning-batch.jsonl
 - **Thread-safe:** Message writing and file management are thread-safe
 - **Flush:** Messages are flushed to disk immediately after writing
 - **Host Binding:** Service binds to `0.0.0.0` (all interfaces)
+- **Logging:** Log level can be set via `--debug`, `--log-level` or `LOG_LEVEL` environment variable

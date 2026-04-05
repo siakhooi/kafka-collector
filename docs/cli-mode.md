@@ -23,6 +23,8 @@ kafka-collector -t topic1,topic2
 | `-g, --group` | `KAFKA_GROUP` | Random UUID | Consumer group ID |
 | `-o, --output` | - | `-` (stdout) | Output file path, use `-` for stdout |
 | `-m, --mode` | `COLLECTOR_MODE` | `cli` | Run mode |
+| `--log-level` | `LOG_LEVEL` | `info` | Logging level: debug, info, warning, error, critical |
+| `--debug` | - | - | Shortcut for `--log-level debug` |
 
 **Note:** The `-c/--capture-dir` and `-p/--port` options are ignored in CLI mode.
 
@@ -68,6 +70,7 @@ kafka-collector -t orders -o /var/log/kafka-messages.jsonl
 export KAFKA_TOPICS=orders,payments
 export KAFKA_BOOTSTRAP_SERVER=kafka:9092
 export KAFKA_GROUP=my-consumer-group
+export LOG_LEVEL=debug
 
 kafka-collector
 ```
@@ -88,3 +91,4 @@ kafka-collector -t orders | wc -l
 - **Auto Commit:** Commits offsets automatically (`enable_auto_commit=True`)
 - **Continuous:** Runs indefinitely until interrupted (Ctrl+C)
 - **Flush:** Output is flushed after each message for real-time streaming
+- **Logging:** Log level can be set via `--debug`, `--log-level` or `LOG_LEVEL` environment variable

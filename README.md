@@ -43,6 +43,7 @@ options:
 - `COLLECTOR_CAPTURE_DIR` - capture directory for service mode
 - `COLLECTOR_MODE` - run mode (cli or service)
 - `COLLECTOR_SERVICE_PORT` - service port (must be integer)
+- `LOG_LEVEL` - logging level
 
 ## Documentation
 
