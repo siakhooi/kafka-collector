@@ -1,1 +1,1 @@
-kafka-collector 0.4.0
+kafka-collector 1.0.0
