@@ -12,6 +12,8 @@ $ kafka-collector -h
 usage: kafka-collector [-h] [-v] [-t TOPICS] [-b BOOTSTRAP_SERVER] [-g GROUP]
                        [-o OUTPUT] [-c CAPTURE_DIR] [-m {cli,service}]
                        [-p PORT]
+                       [--log-level {debug,info,warning,error,critical}]
+                       [--debug]
 
 collect kafka messages from multiple topics
 
@@ -29,6 +31,9 @@ options:
   -m, --mode {cli,service}
                         run mode: cli or service (default: cli)
   -p, --port PORT       service port for service mode (default: 8080)
+  --log-level {debug,info,warning,error,critical}
+                        logging level (default: info)
+  --debug               enable debug logging (shortcut for --log-level debug)
 
 ```
 ## Environment Variables
