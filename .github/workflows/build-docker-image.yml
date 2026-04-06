@@ -29,12 +29,12 @@ jobs:
       - run: ls -l . ./dist/ ./docker
       - run: cat release.docker.env >> $GITHUB_ENV
 
-      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         if: ${{ inputs.push-images }}
         with:
           username: ${{ env.REGISTRY_USERNAME_DOCKER }}
           password: ${{ secrets.REGISTRY_PASSWORD_DOCKER }}
-      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         if: ${{ inputs.push-images }}
         with:
           registry: ghcr.io
