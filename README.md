@@ -57,6 +57,7 @@ options:
 
 ## Links
 - https://pypi.org/project/kafka_collector/
+- https://hub.docker.com/r/siakhooi/kafka-collector
 - https://github.com/siakhooi/kafka-collector
 - https://sonarcloud.io/project/overview?id=siakhooi_kafka-collector
 - https://qlty.sh/gh/siakhooi/projects/kafka-collector
