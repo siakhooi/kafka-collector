@@ -3,3 +3,5 @@ up:
 
 down:
 	docker compose down
+data:
+	./feed-data.sh

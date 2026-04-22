@@ -27,5 +27,7 @@
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
+	"initializeCommand": "docker network inspect kafka-collector >/dev/null 2>&1 || docker network create kafka-collector",
+	"runArgs": ["--network=kafka-collector"],
 	"postStartCommand": "sudo chmod 666 /var/run/docker.sock || true"
 }

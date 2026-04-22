@@ -3,7 +3,8 @@ clean:
 	rm -rf dist target coverage .coverage \
 	src/kafka_collector/__pycache__ .pytest_cache docker-compose/captures \
 	tests/__pycache__ .tox *.log output.jsonl download.zip
-run:
+run: run1-o
+run-no-argument:
 	poetry run kafka-collector
 run-help:
 	poetry run kafka-collector -h
@@ -13,7 +14,7 @@ run-p:
 run1:
 	poetry run kafka-collector -t topic1,topic2,topic3
 run1-o:
-	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl
+	poetry run kafka-collector  -b kafka:9092 -t topic1,topic2,topic3 -o output.jsonl
 # expect warning
 run1-oc:
 	poetry run kafka-collector -t topic1,topic2,topic3 -o output.jsonl -c /tmp/kafka-collector

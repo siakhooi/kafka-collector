@@ -4,6 +4,8 @@ services:
     container_name: kafka
     ports:
       - "9092:9092"
+    networks:
+      - kafka-collector
     environment:
       - KAFKA_NODE_ID=1
       - KAFKA_PROCESS_ROLES=broker,controller
@@ -26,6 +28,8 @@ services:
   kafka-collector:
     image: siakhooi/kafka-collector:latest
     container_name: kafka-collector
+    networks:
+      - kafka-collector
     depends_on:
       kafka:
         condition: service_healthy
@@ -40,3 +44,7 @@ services:
       - "8080:8080"
     volumes:
       - ./captures:/data/captures
+
+networks:
+  kafka-collector:
+    external: true
