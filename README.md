@@ -1,6 +1,27 @@
 # kafka-collector
 
-collect kafka messages from multiple topics
+Collect Kafka messages from multiple topics. Ships as a **CLI** and a **microservice** (HTTP capture management).
+
+**kafka-collector** is the **first step** in a three-tool workflow to **record**, **reshape**, and **replay** Kafka traffic (often into a **development** cluster). Captures are usually **JSONL**; use the companion repos below to turn them into emulator config and produce messages again.
+
+## Related repositories (recommended workflow)
+
+This project works best **in sequence** with:
+
+| Step  | Repository                                                                 | Role                                                                  |
+| ----- | -------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **1** | **kafka-collector** (this repo)                                            | Collect messages from Kafka topics (CLI + microservice).              |
+| **2** | [collector-to-emulator](https://github.com/siakhooi/collector-to-emulator) | Convert collected **JSONL** into files/config usable by the emulator. |
+| **3** | [kafka-emulator](https://github.com/siakhooi/kafka-emulator)               | Produce the configured messages onto Kafka (e.g. dev).                |
+
+**Typical flow**
+
+1. Use **kafka-collector** to capture traffic from the topics you care about.
+2. Use **collector-to-emulator** to generate an **emulator configuration** from those captures.
+3. **Edit the config** as needed (secrets, ordering, scenarios, gaps).
+4. Use **kafka-emulator** to **replay** messages to your target Kafka.
+
+Together: **collect → convert → curate → replay**. For flags, modes, and deployment, see the sections below and [Documentation](#documentation).
 
 ## Installation
 ```
