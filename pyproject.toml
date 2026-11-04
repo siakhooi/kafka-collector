@@ -47,7 +47,7 @@ packages = [{include = "kafka_collector", from = "src"}]
 
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^9.1.1"
+pytest = "^9.2.0"
 pytest-cov = "^7.1.0"
 flake8 = "^7.4.1"
 pytest-mock = "^3.17.0"
