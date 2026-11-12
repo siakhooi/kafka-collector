@@ -69,7 +69,7 @@ test:
 
 all: clean set-version install flake8 build tox-run
 one: clean set-version install flake8 build
-	tox run -e py314
+	tox run -e py315
 312: clean set-version install flake8 build
 	tox run -e py312
 docker-build:
