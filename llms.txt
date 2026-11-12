@@ -1,0 +1,213 @@
+# kafka-collector
+
+> Record Kafka messages as JSON Lines. One process, one consumer, two modes: `cli` streams records to stdout or a file; `service` writes rolling capture files and exposes three HTTP endpoints to finalize, list, and download them.
+
+Collect only. This tool does not create topics, produce messages, or read topic history. It is step 1 of collect → convert ([collector-to-emulator](https://github.com/siakhooi/collector-to-emulator)) → replay ([kafka-emulator](https://github.com/siakhooi/kafka-emulator)).
+
+Package `kafka_collector` (pip). Command `kafka-collector`. Python >= 3.10. Image `siakhooi/kafka-collector` with entrypoint `kafka-collector` (flags or env, same as the CLI).
+
+## Install and run
+
+```bash
+pip install kafka_collector
+kafka-collector -t orders,payments -b localhost:9092
+kafka-collector -m service -t orders,payments -b localhost:9092 -p 8080
+```
+
+Docker passes the same flags after the image name, or uses the environment variables below:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e KAFKA_TOPICS=orders \
+  -e KAFKA_BOOTSTRAP_SERVER=kafka:9092 \
+  -e COLLECTOR_MODE=service \
+  -e COLLECTOR_CAPTURE_DIR=/data/captures \
+  siakhooi/kafka-collector:latest
+```
+
+The process runs until SIGINT or SIGTERM. Argument and fatal errors print `Error: …` on stderr and exit 1. Logs go to stderr, so CLI stdout stays a pure JSONL stream.
+
+## Configuration
+
+A passed flag wins. Otherwise the environment variable is used. An unset flag and an empty variable both fall through to the default. Topics have no default.
+
+| Setting | Flag | Environment | Default | Applies |
+| --- | --- | --- | --- | --- |
+| Topics | `-t`, `--topics` | `KAFKA_TOPICS` | required | both |
+| Bootstrap server | `-b`, `--bootstrap-server` | `KAFKA_BOOTSTRAP_SERVER` | `localhost:9092` | both |
+| Consumer group | `-g`, `--group` | `KAFKA_GROUP` | new UUID every process | both |
+| Mode | `-m`, `--mode` | `COLLECTOR_MODE` | `cli` | both |
+| Output path | `-o`, `--output` | none | `-` (stdout) | cli |
+| Capture directory | `-c`, `--capture-dir` | `COLLECTOR_CAPTURE_DIR` | `/tmp/kafka-collector` | service |
+| HTTP port | `-p`, `--port` | `COLLECTOR_SERVICE_PORT` | `8080` | service |
+| Log level | `--log-level` | `LOG_LEVEL` | `info` | both |
+| Debug | `--debug` | none | off | both |
+
+`--debug` forces `DEBUG` and outranks both `--log-level` and `LOG_LEVEL`.
+
+Topics are a comma-separated list. Surrounding whitespace is stripped and empty entries are dropped. At least one topic is required. A topic name cannot contain a comma.
+
+Mode is `cli` or `service`. Port must be an integer. Log level is `debug`, `info`, `warning`, `error`, or `critical` (any case). An invalid `LOG_LEVEL` prints a warning and the process continues at `INFO`.
+
+Mismatched flags warn on stderr and are ignored: `-o` in service mode; `-c` and `-p` in CLI mode.
+
+Service mode creates the capture directory. Failure to create it exits 1. The default `/tmp/kafka-collector` is for local use; point `-c` or `COLLECTOR_CAPTURE_DIR` at a private path when other users can write `/tmp`.
+
+`kafka` and `werkzeug` loggers stay at WARNING. Application logs use `kafka_collector` and the format `time - logger - LEVEL - message`.
+
+## What the consumer does
+
+On startup the process subscribes to every topic in the list, polls until partitions are assigned, then reads.
+
+`auto_offset_reset` is `latest` and auto-commit is on. For a consumer group that already has committed offsets, consumption resumes at those offsets. For a new group (the default UUID, or a group that has never committed), consumption starts at the end. Messages published before assignment are not collected. There is no flag to rewind to the beginning.
+
+Set `-g` / `KAFKA_GROUP` when a restart should continue the same group. Leave the group unset when each run should see only messages that arrive after it connects.
+
+Wait until stderr shows `Consumer connected and assigned partitions` before producing the messages you intend to capture.
+
+Keys and values must be UTF-8 text or null. A non-UTF-8 key or value stops the process. Header values are copied from the client record; binary headers are not JSON-serializable and also stop the process. Captures of header-less text records are the supported case.
+
+## Record format
+
+One JSON object per line:
+
+```json
+{"topic":"orders","timestamp":1711900800000,"header":{},"value":"payload","key":"k1"}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `topic` | Topic name |
+| `timestamp` | Kafka record timestamp, milliseconds |
+| `header` | Header map, `{}` when the record has none |
+| `value` | UTF-8 payload, or `null` |
+| `key` | UTF-8 key, or `null` |
+
+Every topic shares one stream. Select on `topic`.
+
+## CLI mode
+
+Default mode. Each record is written as one line and flushed immediately.
+
+```bash
+kafka-collector -t orders,payments -b kafka:9092
+kafka-collector -t orders -o /var/log/orders.jsonl
+kafka-collector -t orders | jq -c 'select(.topic=="orders")'
+```
+
+`-o -` is stdout. Any other `-o` path is opened in append mode and must already have a parent directory. A later run with the same path adds lines; it does not replace the file.
+
+```bash
+export KAFKA_TOPICS=orders,payments
+export KAFKA_BOOTSTRAP_SERVER=kafka:9092
+export KAFKA_GROUP=collector-dev
+kafka-collector -o ./orders.jsonl
+```
+
+## Service mode
+
+HTTP server on `0.0.0.0:$port` (Flask’s built-in server, no authentication). Keep it on a private network. A background thread appends the same JSONL records to the open capture file and flushes each line.
+
+```bash
+kafka-collector -m service -t orders,payments -b kafka:9092 \
+  -c /data/captures -p 8080 -g collector-dev
+```
+
+Files on disk are named `kafka-collector_YYYYMMDD_HHMMSS_ffffff.jsonl` (UTC). The open file is not listed and not downloadable. `POST /reset` closes it, registers it under a name, and opens the next file. The name index lives in process memory: a restart leaves the JSONL files in the capture directory and clears the index, so the API will not list or serve captures from a previous process.
+
+### POST /reset
+
+Finalize the open capture and start a new one. Body is optional JSON.
+
+```bash
+curl -s -X POST http://localhost:8080/reset \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"morning-batch"}'
+```
+
+`200`:
+
+```json
+{"status":"ok","new_file":"/data/captures/kafka-collector_20240331_120000_123456.jsonl"}
+```
+
+`new_file` is the capture that starts receiving messages after this call, not the file just closed. The closed file is available under `name`.
+
+Omit `name`, or send `{}`, and the server assigns an 8-character hex id. A provided name is stripped and must be 1–256 characters of `A-Z`, `a-z`, `0-9`, `_`, `.`, `-`, and unique among captures completed in this process.
+
+`400` body is `{"error":"<message>"}`:
+
+| Message | Cause |
+| --- | --- |
+| `name must not be empty` | blank name |
+| `name exceeds maximum length (256)` | name too long |
+| `name contains invalid characters` | character outside the set above |
+| `name '<name>' already exists` | name reused in this process |
+
+### GET /files
+
+Completed captures only, oldest first. `200` with `[]` before the first reset. This is the liveness check (the image healthcheck calls it). `GET /` is not a route.
+
+```json
+[
+  {
+    "name": "morning-batch",
+    "path": "/data/captures/kafka-collector_20240331_120000_123456.jsonl",
+    "completed_at": "2024-03-31T12:00:00.123456+00:00"
+  }
+]
+```
+
+`path` is the server’s filesystem path.
+
+### GET /download
+
+Download one completed capture.
+
+| Query | Required | Default | Values |
+| --- | --- | --- | --- |
+| `name` | no | last completed | capture name |
+| `type` | no | `jsonl` | `jsonl` or `zip` |
+
+```bash
+curl -sS http://localhost:8080/download -o capture.jsonl
+curl -sS 'http://localhost:8080/download?name=morning-batch' -o morning-batch.jsonl
+curl -sS 'http://localhost:8080/download?name=morning-batch&type=zip' -o morning-batch.zip
+```
+
+`type=jsonl` returns `application/jsonl` and the on-disk basename (`kafka-collector_….jsonl`). `type=zip` returns `application/zip` as `<name>.zip` containing that basename.
+
+| Status | Message |
+| --- | --- |
+| 400 | `no completed files` |
+| 400 | `duplicate name parameter` or `duplicate type parameter` |
+| 400 | `type must be jsonl or zip` |
+| 400 | same name errors as `/reset`, when `name` is present but invalid |
+| 404 | `name '<name>' not found` |
+| 404 | `capture file is missing or inaccessible` |
+
+Call `POST /reset` before download. Download reads only completed captures. Stop the process only after the reset you intend to keep; the still-open file is closed on shutdown and is not added to the index.
+
+### Capture sequence
+
+```bash
+kafka-collector -m service -t orders -b localhost:9092 -p 8080
+# wait for "Consumer connected and assigned partitions", then produce
+curl -s -X POST localhost:8080/reset -H 'Content-Type: application/json' -d '{"name":"run1"}'
+curl -s localhost:8080/files
+curl -sS 'localhost:8080/download?name=run1' -o run1.jsonl
+```
+
+## Deployed examples
+
+`docker-compose/` runs Kafka (KRaft) and the collector in service mode. The compose network is external: `docker network create kafka-collector` before `docker compose up`. Collector settings in that file: topics `topic1,topic2`, bootstrap `kafka:9092`, group `my-consumer-group`, mode `service`, port `8080`, capture dir `/data/captures` mounted from `./captures`. The broker advertises `kafka:9092`, so use that address from containers on this network.
+
+`kubernetes/` is service mode via the `kafka-collector-config` ConfigMap (`envFrom`), a single replica, a ClusterIP Service on port 8080, and an `emptyDir` at `/data/captures`. The emptyDir and the in-memory name index both disappear when the pod restarts. Reach it with `kubectl port-forward svc/kafka-collector 8080:8080`.
+
+## Docs
+
+- [CLI mode](docs/cli-mode.md): stdout and file streaming
+- [Service mode](docs/service-mode.md): HTTP capture API
+- [Docker Compose](docker-compose/README.md): local broker plus collector
+- [Kubernetes](kubernetes/README.md): ConfigMap, Deployment, Service
+- [Repository](https://github.com/siakhooi/kafka-collector)
