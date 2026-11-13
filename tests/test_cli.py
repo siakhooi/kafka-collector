@@ -122,9 +122,10 @@ class TestFormatMessage:
 
         assert result["topic"] == "test-topic"
         assert result["timestamp"] == 1234567890
-        assert result["header"] == {"key1": b"value1"}
+        assert result["header"] == {"key1": "value1"}
         assert result["value"] == "test value"
         assert result["key"] == "test key"
+        json.dumps(result)
 
     def test_formats_message_with_none_value(self):
         message = MagicMock()
@@ -151,6 +152,19 @@ class TestFormatMessage:
         result = _format_message(message)
 
         assert result["header"] == {}
+
+    def test_formats_null_header_value(self):
+        message = MagicMock()
+        message.topic = "test-topic"
+        message.timestamp = 1234567890
+        message.headers = [("NORC-TENANT-ID", b"root"), ("empty", None)]
+        message.value = b'{"ok": true}'
+        message.key = b"intent-1"
+
+        result = _format_message(message)
+
+        assert result["header"] == {"NORC-TENANT-ID": "root", "empty": None}
+        json.dumps(result)
 
 
 class TestOpenOutput:

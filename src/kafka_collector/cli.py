@@ -28,11 +28,18 @@ def print_to_stderr_and_exit(e: Exception, exit_code: int) -> None:
     exit(exit_code)
 
 
+def _decode_header_value(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    return value
+
+
 def _format_message(message: Any) -> dict:
+    headers = message.headers or []
     return {
         "topic": message.topic,
         "timestamp": message.timestamp,
-        "header": dict(message.headers) if message.headers else {},
+        "header": {key: _decode_header_value(value) for key, value in headers},
         "value": message.value.decode("utf-8") if message.value else None,
         "key": message.key.decode("utf-8") if message.key else None,
     }
