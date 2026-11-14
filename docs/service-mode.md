@@ -97,15 +97,24 @@ Lists all completed capture files.
   {
     "name": "capture-1",
     "path": "/tmp/kafka-collector/kafka-collector_20240331_100000_123456.jsonl",
-    "completed_at": "2024-03-31T12:00:00.123456+00:00"
+    "completed_at": "2024-03-31T12:00:00.123456+00:00",
+    "size": 4096
   },
   {
     "name": "capture-2",
     "path": "/tmp/kafka-collector/kafka-collector_20240331_120000_654321.jsonl",
-    "completed_at": "2024-03-31T14:00:00.654321+00:00"
+    "completed_at": "2024-03-31T14:00:00.654321+00:00",
+    "size": 128
   }
 ]
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Name given at `/reset`, or a generated 8-character ID |
+| `path` | string | Absolute path of the completed capture file |
+| `completed_at` | string | UTC timestamp when the capture was finalized |
+| `size` | integer | Size of the capture file in bytes |
 
 ### GET /download
 

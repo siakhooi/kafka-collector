@@ -78,6 +78,24 @@ def test_get_files_returns_completed_captures(client):
     names = [f["name"] for f in files]
     assert "seg1" in names
     assert "seg2" in names
+    assert files[0]["size"] == 0
+    assert files[1]["size"] == 0
+
+
+def test_get_files_returns_written_byte_size(tmp_path):
+    capture = tmp_path / "cap"
+    capture.mkdir()
+    fm = FileManager(str(capture))
+    fm.open_new_file()
+    fm.write("héllo\n")
+    client = create_app(fm).test_client()
+
+    client.post("/reset", json={"name": "seg"})
+    files = client.get("/files").get_json()
+
+    assert len(files) == 1
+    assert files[0]["name"] == "seg"
+    assert files[0]["size"] == Path(files[0]["path"]).stat().st_size
 
 
 def test_download_rejects_duplicate_name_parameter(client):
