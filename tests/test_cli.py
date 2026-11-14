@@ -97,15 +97,17 @@ def test_run_wrong_options(monkeypatch, capsys, options):
 
 class TestPrintToStderrAndExit:
     def test_prints_error_and_exits(self, capsys):
+        error = Exception("test error")
         with pytest.raises(SystemExit):
-            print_to_stderr_and_exit(Exception("test error"), 1)
+            print_to_stderr_and_exit(error, 1)
 
         captured = capsys.readouterr()
         assert "Error: test error" in captured.err
 
     def test_exits_with_correct_code(self):
+        error = Exception("test")
         with pytest.raises(SystemExit) as exc_info:
-            print_to_stderr_and_exit(Exception("test"), 42)
+            print_to_stderr_and_exit(error, 42)
         assert exc_info.value.code == 42
 
 
