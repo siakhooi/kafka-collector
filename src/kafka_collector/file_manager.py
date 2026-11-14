@@ -47,6 +47,7 @@ class FileManager:
             "name": file_name,
             "path": path,
             "completed_at": self._utc_now().isoformat(),
+            "size": os.path.getsize(path),
         }
 
     def _generate_short_id(self) -> str:

@@ -97,6 +97,16 @@ def test_reset_records_completed_path_and_completed_at(fm_open, monkeypatch):
     assert files[0]["name"] == "seg"
     assert files[0]["path"] == first_path
     assert files[0]["completed_at"] == fixed.isoformat()
+    assert files[0]["size"] == 0
+
+
+def test_reset_records_file_size_in_bytes(fm_open):
+    fm_open.write("héllo\n")
+    path = fm_open.current_filepath
+    assert path is not None
+    fm_open.reset("seg")
+
+    assert fm_open.get_files()[0]["size"] == Path(path).stat().st_size
 
 
 def test_reset_without_open_still_starts_capture(capture_dir):
